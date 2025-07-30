@@ -2,9 +2,9 @@
 
 
 import React, { useState, useEffect } from 'react';
-import AuthForm from './components/AuthForm';
-import Layout from './components/Layout';
-import { AppContextProvider } from './contexts/AppContext';
+import AuthForm from './components/AuthForm.tsx';
+import Layout from './components/Layout.tsx';
+import { AppContextProvider } from './contexts/AppContext.tsx';
 import { supabase } from './services/supabase';
 import { UserProfile, Role } from './types';
 import { showToast } from './components/common/Toast';
