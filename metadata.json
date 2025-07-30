@@ -1,0 +1,6 @@
+{
+  "name": "GESTION PRO",
+  "description": "A simple, installable Progressive Web App for taking notes, enhanced with AI summarization powered by the Gemini API.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
