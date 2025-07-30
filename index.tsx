@@ -1,4 +1,3 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -15,10 +14,7 @@ root.render(
   </React.StrictMode>
 );
 
-// Service Worker registration has been removed to prevent the app from getting stuck
-// in development environments like AI Studio due to origin mismatch errors.
-// It can be re-added later with more robust environment checks if PWA offline capabilities are critical.
-// Registrar el Service Worker
+// Registrar el Service Worker (PWA)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
