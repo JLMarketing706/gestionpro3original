@@ -47,5 +47,3 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
-// Obligatorio para que VitePWA inyecte los assets
-self.__WB_MANIFEST;
