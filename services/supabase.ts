@@ -2,10 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import { Database } from './database.types';
 
 // These credentials were provided by the user.
-const supabaseUrl = 'https://atonagdtvfsjoqimcvlc.supabase.co';
+const supabaseUrl = 'https://waymithityqrqzrzkfwi.supabase.co';
 // WARNING: This key is publicly visible and should only be a public-facing anon key.
 // In a real production app, this should come from environment variables.
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0b25hZ2R0dmZzam9xaW1jdmxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5Mzc3ODUsImV4cCI6MjA2ODUxMzc4NX0.CUUz-i21HEdT7G8qm1uOy89W3UKaDG6eGyD5nSxpvN0';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndheW1pdGhpdHlxcnF6cnprZndpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM5MDAzODAsImV4cCI6MjA2OTQ3NjM4MH0.0rHhPQGeDCipGUVLMCVvHsNC911q8humPFSrWzDSWT0';
 
 // Export the Supabase client, now strongly typed with the Database interface
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
