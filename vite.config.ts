@@ -18,11 +18,16 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
-      VitePWA({
-        registerType: 'autoUpdate',
-        manifest: false, // Evita que Vite lo genere automáticamente
-        includeAssets: ['manifest.webmanifest'], // Asegura que se incluya el archivo como está
-      }),
+     VitePWA({
+  registerType: 'autoUpdate',
+  injectRegister: false, // Evita que el plugin registre el SW por su cuenta
+  manifest: false,
+  includeAssets: ['manifest.webmanifest'],
+  strategies: 'injectManifest', // No genera un SW automático
+  srcDir: 'public',
+  filename: 'service-worker.js',
+}),
+
     ],
   };
 });
