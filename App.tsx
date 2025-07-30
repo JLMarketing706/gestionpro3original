@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import AuthForm from './components/AuthForm';
 import Layout from './components/Layout';
@@ -8,51 +9,45 @@ import { supabase } from './services/supabase';
 import { UserProfile, Role } from './types';
 import { showToast } from './components/common/Toast';
 import { OnboardingProvider } from './components/common/Onboarding';
+import { Session } from '@supabase/supabase-js';
 
 const App: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true); // Start with loading true
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // onAuthStateChange is the single source of truth for auth state.
-    // It fires once on initial load with the current session (or null),
-    // and then again whenever the auth state changes (login, logout).
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      try {
-        if (session) {
-          // Step 1: Fetch profile without the implicit join that was causing errors.
-          const { data: profile, error: profileError } = await supabase
+    setLoading(true);
+
+    const fetchUserProfileAndRole = async (session: Session): Promise<UserProfile> => {
+        const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select(`*`)
             .eq('id', session.user.id)
             .maybeSingle();
 
-          if (profileError) {
-            console.error("Error fetching profile on auth state change:", profileError);
-            throw profileError; // Let the catch block handle it
-          }
+        if (profileError) {
+            console.error("Error fetching profile:", profileError);
+            throw profileError;
+        }
             
-          let roleData: Role | null = null;
-          // Step 2: If the profile has a role_id, fetch the role details separately.
-          if (profile && profile.role_id) {
-              const { data: fetchedRole, error: roleError } = await supabase
-                  .from('roles')
-                  .select('*')
-                  .eq('id', profile.role_id)
-                  .single();
-              
-              if (roleError) {
-                  // Log the error but don't block login. The user can proceed without role permissions.
-                  console.error("Could not fetch role details:", roleError);
-                  showToast('No se pudieron cargar los permisos del rol.', 'error');
-              } else {
-                  roleData = fetchedRole;
-              }
-          }
-          
-          // Step 3: Construct the final user profile object.
-          const userProfile: UserProfile = { 
+        let roleData: Role | null = null;
+        if (profile && profile.role_id) {
+            const { data: fetchedRole, error: roleError } = await supabase
+                .from('roles')
+                .select('*')
+                .eq('id', profile.role_id)
+                .single();
+            
+            if (roleError) {
+                console.error("Could not fetch role details:", roleError);
+                showToast('No se pudieron cargar los permisos del rol.', 'error');
+            } else {
+                roleData = fetchedRole;
+            }
+        }
+        
+        return { 
             id: session.user.id, 
             email: session.user.email!, 
             full_name: profile?.full_name || session.user.email!,
@@ -61,23 +56,45 @@ const App: React.FC = () => {
             role: roleData,
             role_id: profile?.role_id || null,
             sucursal_id: profile?.sucursal_id || null
-          };
-          setUser(userProfile);
-          setIsLoggedIn(true);
-        } else {
-          setUser(null);
-          setIsLoggedIn(false);
+        };
+    };
+
+    // Explicitly check the session on initial component mount
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+        try {
+            if (session) {
+                const userProfile = await fetchUserProfileAndRole(session);
+                setUser(userProfile);
+                setIsLoggedIn(true);
+            } else {
+                setUser(null);
+                setIsLoggedIn(false);
+            }
+        } catch (error) {
+            console.error("Error on initial session fetch:", error);
+            showToast("Ocurrió un error al cargar tu sesión.", 'error');
+            setUser(null);
+            setIsLoggedIn(false);
+        } finally {
+            setLoading(false);
         }
-      } catch (error) {
-        console.error("Failed to process auth state change:", error);
-        showToast("Ocurrió un error al cargar tu perfil.", 'error');
-        // Ensure state is cleared on error
-        setUser(null);
-        setIsLoggedIn(false);
-      } finally {
-        // This is crucial: always stop loading, regardless of success or failure.
-        setLoading(false);
-      }
+    });
+
+    // Listen for future auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        try {
+            if (session) {
+                const userProfile = await fetchUserProfileAndRole(session);
+                setUser(userProfile);
+                setIsLoggedIn(true);
+            } else {
+                setUser(null);
+                setIsLoggedIn(false);
+            }
+        } catch (error) {
+            console.error("Error on auth state change:", error);
+            // Don't set loading here as this is for subsequent changes
+        }
     });
 
     return () => {
@@ -86,13 +103,12 @@ const App: React.FC = () => {
   }, []);
 
   const handleLogout = async () => {
-    // Calling signOut will trigger the onAuthStateChange listener,
-    // which will handle clearing the user state and showing the login form.
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("Error al cerrar sesión:", error);
       showToast("Ocurrió un error al intentar cerrar la sesión.", 'error');
     }
+    // The onAuthStateChange listener will handle the state update
   };
   
   if (loading) {
