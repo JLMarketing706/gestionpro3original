@@ -474,7 +474,7 @@ const Configuracion: React.FC = () => {
                                     <input type="text" id="business_phone" name="business_phone" value={config.business_phone || ''} onChange={handleConfigChange} className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg"/>
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label htmlFor="business_address" className="block text-sm font-medium text-slate-400 mb-2">Dirección del Negocio</p>
+                                    <label htmlFor="business_address" className="block text-sm font-medium text-slate-400 mb-2">Dirección del Negocio</label>
                                     <input type="text" id="business_address" name="business_address" value={config.business_address || ''} onChange={handleConfigChange} className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg"/>
                                 </div>
                                 <div>
