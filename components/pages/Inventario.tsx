@@ -241,13 +241,9 @@ const Inventario: React.FC = () => {
 
     const handleSave = async (productData: Product, stockData: StockData[], imageFile?: File | null) => {
         try {
-            let imageUrl = productData.image_url;
-            if (imageFile) {
-                const fileExt = imageFile.name.split('.').pop() || 'png';
-                const fileName = productData.id || `new_${Date.now()}`;
-                const filePath = `${user.id}/${fileName}.${fileExt}`;
-                imageUrl = await uploadFile(imageFile, 'avatars', filePath) || productData.image_url;
-            }
+            // Omitir subida de imagen temporalmente
+            // let imageUrl = productData.image_url;
+            // if (imageFile) { ... }
 
             // Validar campos obligatorios de producto
             if (!productData.name || !productData.unit || !productData.description || !productData.category) {
@@ -265,36 +261,51 @@ const Inventario: React.FC = () => {
 
             if (productData.id) {
                 // Actualizar producto existente y branch_stock
-                const { id, created_at, user_id, ...updateData } = { ...productData, image_url: imageUrl };
+                const { id, created_at, user_id, ...updateData } = { ...productData };
                 const cleanStockDataForUpdate = stockData.map(({ profit_margin, ...rest }) => ({
                     ...rest,
                     product_id: id,
                 }));
-                await updateProduct(id, updateData, cleanStockDataForUpdate);
+                try {
+                    await updateProduct(id, updateData, cleanStockDataForUpdate);
+                } catch (err) {
+                    showToast('Error al actualizar producto o inventario', 'error');
+                    return;
+                }
                 showToast('Producto actualizado con éxito', 'success');
             } else {
                 // Crear producto primero
                 const { id, created_at, ...insertData } = productData;
-                const newProductData = { ...insertData, image_url: imageUrl, user_id: user.id, sku: insertData.sku || `SKU-${Date.now().toString().slice(-6)}` };
-                // addProduct debe devolver el id generado
-                const createdProduct = await addProduct(newProductData, []); // No pasar stock aún
-                const productId = createdProduct?.id;
-                if (!productId) {
-                    showToast('No se pudo crear el producto', 'error');
+                const newProductData = { ...insertData, user_id: user.id, sku: insertData.sku || `SKU-${Date.now().toString().slice(-6)}` };
+                let createdProduct;
+                try {
+                    createdProduct = await addProduct(newProductData, []); // No pasar stock aún
+                } catch (err) {
+                    showToast('Error al crear el producto', 'error');
                     return;
                 }
-                // Ahora crear branch_stock para cada sucursal
+                const productId = createdProduct?.id;
+                if (!productId) {
+                    showToast('No se pudo obtener el ID del producto', 'error');
+                    return;
+                }
+                // Crear branch_stock para cada sucursal
                 const cleanStockDataForInsert = stockData.map(({ profit_margin, ...rest }) => ({
                     ...rest,
                     product_id: productId,
                 }));
-                await updateProduct(productId, {}, cleanStockDataForInsert); // updateProduct solo para branch_stock
-                showToast('Producto creado con éxito', 'success');
+                try {
+                    await updateProduct(productId, {}, cleanStockDataForInsert); // updateProduct solo para branch_stock
+                } catch (err) {
+                    showToast('Error al crear inventario por sucursal', 'error');
+                    return;
+                }
+                showToast('Producto e inventario creados con éxito', 'success');
             }
             closeModal();
         } catch (error) {
             console.error("Failed to save product:", error);
-            showToast(`Error al guardar el producto: ${(error as Error).message}`, 'error');
+            showToast(`Error inesperado: ${(error as Error).message}`, 'error');
         }
     };
 
