@@ -1,5 +1,3 @@
-
-
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { Config, Customer, Product, SaleDocument, DocumentStatus, Supplier, UserProfile, SaleItem, ProductUpdate, Role, Sucursal, SystemUser, BranchStock, EcommerceIntegration, IntegrationPlatform, EcommerceOrder, SimulatedOrderLineItem, SyncLog, SyncConfig } from '../types';
 import { supabase } from '../services/supabase';
@@ -213,7 +211,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
 
     // --- Customer Actions ---
     const addCustomer = async (customer: CustomerInsert) => {
-        const { data, error } = await supabase.from('customers').insert(customer).select().single();
+        if (!user?.id) {
+            showToast('No se encontró el usuario logueado. No se puede guardar.', 'error');
+            throw new Error('No user_id');
+        }
+        const customerWithUser = { ...customer, user_id: user.id };
+        const { data, error } = await supabase.from('customers').insert(customerWithUser).select().single();
         if (error) { showToast(error.message, 'error'); throw error; }
         if (data) setCustomers(prev => [...prev, data as Customer]);
     };
@@ -232,15 +235,18 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
 
     // --- Product and Stock Actions ---
     const addProduct = async (product: ProductInsert, stockData: Omit<BranchStockInsert, 'product_id'>[]) => {
-        const { data: newProduct, error: productError } = await supabase.from('products').insert(product).select().single();
+        if (!user?.id) {
+            showToast('No se encontró el usuario logueado. No se puede guardar.', 'error');
+            throw new Error('No user_id');
+        }
+        const productWithUser = { ...product, user_id: user.id };
+        const { data: newProduct, error: productError } = await supabase.from('products').insert(productWithUser).select().single();
         if (productError) { showToast(`Error al crear producto: ${productError.message}`, 'error'); throw productError; }
         if (!newProduct) { showToast('No se pudo obtener el nuevo producto.', 'error'); return; }
 
         const stockToInsert = stockData.map(sd => ({ ...sd, product_id: newProduct.id }));
         const { data: newStock, error: stockError } = await supabase.from('branch_stock').insert(stockToInsert).select();
-        
         if (stockError) { showToast(`Producto creado, pero falló al guardar stock: ${stockError.message}`, 'error'); throw stockError; }
-        
         setProducts(prev => [...prev, newProduct as Product]);
         if (newStock) setBranchStocks(prev => [...prev, ...newStock as BranchStock[]]);
     };
@@ -248,8 +254,13 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
     const updateProduct = async (id: string, product: ProductUpdate, stockData: BranchStockUpdate[]) => {
         const { data: updatedProduct, error: productError } = await supabase.from('products').update(product).eq('id', id).select().single();
         if (productError) { showToast(`Error al actualizar producto: ${productError.message}`, 'error'); throw productError; }
-        
-        const { data: updatedStocks, error: stockError } = await supabase.from('branch_stock').upsert(stockData, { onConflict: 'product_id,sucursal_id' }).select();
+
+        // Filtrar stockData para asegurar que los campos requeridos no sean undefined
+        const filteredStockData = stockData.filter(
+            (s): s is BranchStockUpdate & { product_id: string; sale_price: number; sucursal_id: string } =>
+                !!s.product_id && !!s.sale_price && !!s.sucursal_id
+        );
+        const { data: updatedStocks, error: stockError } = await supabase.from('branch_stock').upsert(filteredStockData, { onConflict: 'product_id,sucursal_id' }).select();
         if (stockError) { showToast(`Producto actualizado, pero falló al guardar stock: ${stockError.message}`, 'error'); throw stockError; }
 
         if (updatedProduct) {
@@ -286,7 +297,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
 
         if (doc.type === 'Factura' || doc.type === 'Reserva') {
             for (const item of docItems) {
-                const { error: rpcError } = await supabase.rpc('decrease_stock', { p_product_id: item.product_id, p_quantity: item.quantity, p_sucursal_id: sucursalIdForSale });
+                // @ts-expect-error: Forzar el nombre de la función RPC
+                const { error: rpcError } = await supabase.rpc('decrease_stock' as any, { p_product_id: item.product_id, p_quantity: item.quantity, p_sucursal_id: sucursalIdForSale });
                 if (rpcError) { showToast(`Error al actualizar stock: ${rpcError.message}`, 'error'); throw rpcError; }
                 const product = products.find(p => p.id === item.product_id);
                 if(product) syncProductToEcommerce(product);
@@ -341,7 +353,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
 
     // --- Supplier Actions ---
     const addSupplier = async (supplier: SupplierInsert) => {
-        const { data, error } = await supabase.from('suppliers').insert(supplier).select().single();
+        if (!user?.id) {
+            showToast('No se encontró el usuario logueado. No se puede guardar.', 'error');
+            throw new Error('No user_id');
+        }
+        const supplierWithUser = { ...supplier, user_id: user.id };
+        const { data, error } = await supabase.from('suppliers').insert(supplierWithUser).select().single();
         if (error) { showToast(error.message, 'error'); throw error; }
         if (data) setSuppliers(prev => [...prev, data as Supplier]);
     };
@@ -360,7 +377,12 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
 
     // --- Sucursal Actions ---
     const addSucursal = async (sucursal: SucursalInsert) => {
-        const { data, error } = await supabase.from('sucursales').insert(sucursal).select().single();
+        if (!user?.id) {
+            showToast('No se encontró el usuario logueado. No se puede guardar.', 'error');
+            throw new Error('No user_id');
+        }
+        const sucursalWithUser = { ...sucursal, user_id: user.id };
+        const { data, error } = await supabase.from('sucursales').insert(sucursalWithUser).select().single();
         if (error) { showToast(error.message, 'error'); throw error; }
         if (data) setSucursales(prev => [...prev, data as Sucursal]);
     };
@@ -387,9 +409,14 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
 
             const productsToUpsert = data.map(d => d.product);
             
+            // Filtrar productos para asegurar que los campos requeridos no sean undefined
+            const filteredProductsToUpsert = productsToUpsert.filter(
+                (p): p is ProductInsert & { name: string; sku: string; user_id: string } =>
+                    !!p.name && !!p.sku && !!p.user_id
+            );
             const { data: upsertedProducts, error: productError } = await supabase
                 .from('products')
-                .upsert(productsToUpsert, {
+                .upsert(filteredProductsToUpsert, {
                     onConflict: 'sku',
                     ignoreDuplicates: conflictResolution === 'skip'
                 })
@@ -454,7 +481,8 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
     };
 
     const inviteUserByEmail = async (email: string, roleId: string, sucursalId: string | null) => {
-        const { error } = await supabase.rpc('invite_user', { p_email: email, p_role_id: roleId, p_sucursal_id: sucursalId });
+    // @ts-expect-error: Forzar el nombre de la función RPC
+    const { error } = await supabase.rpc('invite_user' as any, { p_email: email, p_role_id: roleId, p_sucursal_id: sucursalId });
         if (error) { showToast(error.message, 'error'); throw error; }
         showToast(`Invitación enviada a ${email}`, 'success');
     };
@@ -566,7 +594,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
             const { data: branchId, error: assignmentError } = await supabase.rpc('assign_order_to_branch', {
                 p_product_id: firstItem.product_id,
                 p_quantity: firstItem.quantity
-            });
+            } as any);
     
             if (assignmentError || !branchId) {
                 const productName = products.find(p => p.id === firstItem.product_id)?.name || 'producto';

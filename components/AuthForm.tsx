@@ -60,6 +60,8 @@ const AuthForm: React.FC = () => {
       },
     });
 
+    // Ya no se crea el perfil aquí, se hará en AppContext tras confirmación de email
+
     setIsLoading(false);
     if (error) {
       if (error.message === 'Password should be at least 6 characters.') {
@@ -67,41 +69,31 @@ const AuthForm: React.FC = () => {
       } else if (error.message === 'Error sending confirmation email') {
         setError('Error al enviar el correo. Es posible que se haya alcanzado el límite de envíos. Por favor, intenta de nuevo más tarde.');
       } else {
-        setError(error.message);
-      }
-    } else if (data.user) {
-      if (data.user.identities && data.user.identities.length === 0) {
-        setError("Este correo ya está registrado pero no confirmado. Revisa tu bandeja de entrada o intenta con otro correo.");
-      } else {
-        setShowConfirmation(true);
-      }
-    } else {
-      // Fallback for unexpected API response where there's no user and no error.
-      setError("No se pudo crear la cuenta. Por favor, verifica tus datos e inténtalo de nuevo.");
-    }
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+        // Ya no se crea el perfil aquí, se hará en AppContext tras confirmación de email
     setIsLoading(true);
     setError('');
 
     // Changed to signInWithPassword for supabase-js v2
-    const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
 
-    setIsLoading(false);
     if (error) {
-        if (error.message === 'Invalid login credentials') {
-            setError('Correo electrónico o contraseña incorrectos.');
-        } else if (error.message === 'Email not confirmed') {
-            setError('Tu correo no ha sido confirmado. Por favor, revisa tu bandeja de entrada.');
-        } else {
-            setError(error.message);
-        }
+      setIsLoading(false);
+      if (error.message === 'Invalid login credentials') {
+        setError('Correo electrónico o contraseña incorrectos.');
+      } else if (error.message === 'Email not confirmed') {
+        setError('Tu correo no ha sido confirmado. Por favor, revisa tu bandeja de entrada.');
+      } else {
+        setError(error.message);
+      }
+      return;
     }
+
+    // Ya no se crea el perfil aquí, se hará en AppContext tras confirmación de email
+
+    setIsLoading(false);
     // onLoginSuccess is handled by the onAuthStateChange listener in App.tsx
   };
 

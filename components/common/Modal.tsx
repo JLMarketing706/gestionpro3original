@@ -10,11 +10,11 @@ const Modal: React.FC<ModalProps> = ({ onClose, children }) => {
     return (
         <div 
             className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in"
-            onClick={onClose}
+            onClick={() => { console.log('Fondo del modal clickeado'); onClose(); }}
         >
             <div 
                 className="w-full max-w-2xl bg-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8 border border-slate-700 relative"
-                onClick={e => e.stopPropagation()}
+                onClick={e => { console.log('Interior del modal clickeado'); e.stopPropagation(); }}
             >
                 <button 
                     onClick={onClose} 

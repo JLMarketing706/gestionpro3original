@@ -156,12 +156,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                 <div className="w-full sm:w-2/3 space-y-4">
                     <input type="text" name="name" placeholder="Nombre del producto" value={formData.name} onChange={handleFormChange} required className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
                     <input type="text" name="sku" placeholder="SKU (autogenerado si se deja en blanco)" value={formData.sku} onChange={handleFormChange} className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+                    <span className="text-xs text-slate-400">Si dejas el SKU vacío, se generará automáticamente al guardar.</span>
                     <select name="unit" value={formData.unit} onChange={handleFormChange} className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500">
                         <option value="unidad">Unidad</option>
                         <option value="kg">Kilo</option>
                         <option value="litro">Litro</option>
                         <option value="caja">Caja</option>
                     </select>
+                    <textarea name="description" placeholder="Descripción del producto" value={formData.description} onChange={handleFormChange} required rows={2} className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+                    <input type="text" name="category" placeholder="Categoría (ej: Alimentos, Bebidas...)" value={formData.category} onChange={handleFormChange} required className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
                 </div>
             </div>
 

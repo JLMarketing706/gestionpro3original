@@ -20,85 +20,135 @@ const App: React.FC = () => {
     setLoading(true);
 
     const fetchUserProfileAndRole = async (session: Session): Promise<UserProfile> => {
-        const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select(`*`)
-            .eq('id', session.user.id)
-            .maybeSingle();
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select(`*`)
+        .eq('id', session.user.id)
+        .maybeSingle();
 
-        if (profileError) {
-            console.error("Error fetching profile:", profileError);
-            throw profileError;
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
+        throw profileError;
+      }
+
+      // Si no existe el perfil, crearlo automáticamente
+      if (!profile) {
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: session.user.id,
+            full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Usuario'
+          })
+          .select()
+          .single();
+        if (createError) {
+          console.error('Error creando perfil:', createError);
+          throw createError;
         }
-            
+        console.log('Perfil creado automáticamente:', newProfile);
+        // Cargar rol si corresponde
         let roleData: Role | null = null;
-        if (profile && profile.role_id) {
-            const { data: fetchedRole, error: roleError } = await supabase
-                .from('roles')
-                .select('*')
-                .eq('id', profile.role_id)
-                .single();
-            
-            if (roleError) {
-                console.error("Could not fetch role details:", roleError);
-                showToast('No se pudieron cargar los permisos del rol.', 'error');
-            } else {
-                roleData = fetchedRole;
-            }
+        if (newProfile && newProfile.role_id) {
+          const { data: fetchedRole, error: roleError } = await supabase
+            .from('roles')
+            .select('*')
+            .eq('id', newProfile.role_id)
+            .single();
+          if (roleError) {
+            console.error("Could not fetch role details:", roleError);
+            showToast('No se pudieron cargar los permisos del rol.', 'error');
+          } else {
+            roleData = fetchedRole;
+          }
         }
-        
-        return { 
-            id: session.user.id, 
-            email: session.user.email!, 
-            full_name: profile?.full_name || session.user.email!,
-            avatar_url: profile?.avatar_url || null,
-            config: (profile?.config as any) || { base_currency: 'ARS', active_plan: 'Comercios' },
-            role: roleData,
-            role_id: profile?.role_id || null,
-            sucursal_id: profile?.sucursal_id || null
+        return {
+          id: session.user.id,
+          email: session.user.email!,
+          full_name: newProfile?.full_name || session.user.email!,
+          avatar_url: newProfile?.avatar_url || null,
+          config: (newProfile?.config as any) || { base_currency: 'ARS', active_plan: 'Comercios' },
+          role: roleData,
+          role_id: newProfile?.role_id || null,
+          sucursal_id: newProfile?.sucursal_id || null
         };
+      }
+
+      let roleData: Role | null = null;
+      if (profile && profile.role_id) {
+        const { data: fetchedRole, error: roleError } = await supabase
+          .from('roles')
+          .select('*')
+          .eq('id', profile.role_id)
+          .single();
+
+        if (roleError) {
+          console.error("Could not fetch role details:", roleError);
+          showToast('No se pudieron cargar los permisos del rol.', 'error');
+        } else {
+          roleData = fetchedRole;
+        }
+      }
+
+      return {
+        id: session.user.id,
+        email: session.user.email!,
+        full_name: profile?.full_name || session.user.email!,
+        avatar_url: profile?.avatar_url || null,
+        config: (profile?.config as any) || { base_currency: 'ARS', active_plan: 'Comercios' },
+        role: roleData,
+        role_id: profile?.role_id || null,
+        sucursal_id: profile?.sucursal_id || null
+      };
     };
 
-    // Explicitly check the session on initial component mount
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    let authListener: any = null;
+
+    const checkSessionAndSubscribe = async () => {
+      // Explicitly check the session on initial component mount
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const userProfile = await fetchUserProfileAndRole(session);
+          setUser(userProfile);
+          setIsLoggedIn(true);
+        } else {
+          setUser(null);
+          setIsLoggedIn(false);
+        }
+      } catch (error) {
+        console.error("Error on initial session fetch:", error);
+        showToast("Ocurrió un error al cargar tu sesión.", 'error');
+        setUser(null);
+        setIsLoggedIn(false);
+      } finally {
+        setLoading(false);
+      }
+
+      // Listen for future auth changes
+      authListener = supabase.auth.onAuthStateChange(async (_event, session) => {
         try {
-            if (session) {
-                const userProfile = await fetchUserProfileAndRole(session);
-                setUser(userProfile);
-                setIsLoggedIn(true);
-            } else {
-                setUser(null);
-                setIsLoggedIn(false);
-            }
-        } catch (error) {
-            console.error("Error on initial session fetch:", error);
-            showToast("Ocurrió un error al cargar tu sesión.", 'error');
+          if (session) {
+            const userProfile = await fetchUserProfileAndRole(session);
+            setUser(userProfile);
+            setIsLoggedIn(true);
+          } else {
             setUser(null);
             setIsLoggedIn(false);
-        } finally {
-            setLoading(false);
-        }
-    });
-
-    // Listen for future auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        try {
-            if (session) {
-                const userProfile = await fetchUserProfileAndRole(session);
-                setUser(userProfile);
-                setIsLoggedIn(true);
-            } else {
-                setUser(null);
-                setIsLoggedIn(false);
-            }
+          }
         } catch (error) {
-            console.error("Error on auth state change:", error);
-            // Don't set loading here as this is for subsequent changes
+          console.error("Error on auth state change:", error);
         }
-    });
+      });
+    };
+
+    checkSessionAndSubscribe();
 
     return () => {
-      authListener?.subscription.unsubscribe();
+      if (authListener && authListener.data && authListener.data.subscription) {
+        authListener.data.subscription.unsubscribe();
+      } else if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
     };
   }, []);
 
