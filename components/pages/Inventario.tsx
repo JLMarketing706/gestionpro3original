@@ -1,5 +1,5 @@
 
-import React, { useState, useContext, useMemo, useEffect } from 'react';
+import React, { useState, useContext, useMemo } from 'react';
 import { AppContext } from '../../contexts/AppContext';
 import { CubeIcon, PlusIcon, CameraIcon, ArrowUpTrayIcon, ArrowPathIcon } from '../icons';
 import { Product, Sucursal, BranchStock } from '../../types';
@@ -33,8 +33,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         image_url: product?.image_url || '',
         is_active: product?.is_active ?? true,
         description: product?.description || '',
-        category: product?.category || ''
+        category: product?.category || '',
+        barcode: '', // Campo adicional temporal
+        brand: ''   // Campo adicional temporal
     });
+
+    // Estados para categorías y marcas
+    const [categories, setCategories] = useState<string[]>(['Alimentos', 'Bebidas', 'Limpieza', 'Tecnología']);
+    const [brands, setBrands] = useState<string[]>(['Sin marca', 'Coca Cola', 'Samsung', 'Apple']);
+    const [showNewCategory, setShowNewCategory] = useState(false);
+    const [showNewBrand, setShowNewBrand] = useState(false);
+    const [newCategory, setNewCategory] = useState('');
+    const [newBrand, setNewBrand] = useState('');
     
     const [stockBySucursal, setStockBySucursal] = useState<StockData[]>(() => 
         sucursales.map(s => {
@@ -63,6 +73,24 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             setFormData(prev => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
+        }
+    };
+
+    const handleAddCategory = () => {
+        if (newCategory.trim() && !categories.includes(newCategory.trim())) {
+            setCategories(prev => [...prev, newCategory.trim()]);
+            setFormData(prev => ({ ...prev, category: newCategory.trim() }));
+            setNewCategory('');
+            setShowNewCategory(false);
+        }
+    };
+
+    const handleAddBrand = () => {
+        if (newBrand.trim() && !brands.includes(newBrand.trim())) {
+            setBrands(prev => [...prev, newBrand.trim()]);
+            setFormData(prev => ({ ...prev, brand: newBrand.trim() }));
+            setNewBrand('');
+            setShowNewBrand(false);
         }
     };
     
@@ -155,16 +183,67 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                 </div>
                 <div className="w-full sm:w-2/3 space-y-4">
                     <input type="text" name="name" placeholder="Nombre del producto" value={formData.name} onChange={handleFormChange} required className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
-                    <input type="text" name="sku" placeholder="SKU (autogenerado si se deja en blanco)" value={formData.sku} onChange={handleFormChange} className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
-                    <span className="text-xs text-slate-400">Si dejas el SKU vacío, se generará automáticamente al guardar.</span>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <input type="text" name="sku" placeholder="SKU (autogenerado si vacío)" value={formData.sku} onChange={handleFormChange} className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+                            <span className="text-xs text-slate-400">Se autogenera si está vacío</span>
+                        </div>
+                        <input type="text" name="barcode" placeholder="Código de Barras (opcional)" value={formData.barcode} onChange={handleFormChange} className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+                    </div>
+
                     <select name="unit" value={formData.unit} onChange={handleFormChange} className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500">
                         <option value="unidad">Unidad</option>
                         <option value="kg">Kilo</option>
                         <option value="litro">Litro</option>
                         <option value="caja">Caja</option>
+                        <option value="metro">Metro</option>
+                        <option value="par">Par</option>
                     </select>
+
                     <textarea name="description" placeholder="Descripción del producto" value={formData.description} onChange={handleFormChange} required rows={2} className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
-                    <input type="text" name="category" placeholder="Categoría (ej: Alimentos, Bebidas...)" value={formData.category} onChange={handleFormChange} required className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+                    
+                    {/* Selector de Categoría */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-300">Categoría *</label>
+                        <div className="flex gap-2">
+                            <select name="category" value={formData.category} onChange={handleFormChange} required className="flex-1 p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                                <option value="">Seleccionar categoría</option>
+                                {categories.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+                            <button type="button" onClick={() => setShowNewCategory(!showNewCategory)} className="px-3 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-bold">+</button>
+                        </div>
+                        {showNewCategory && (
+                            <div className="flex gap-2">
+                                <input type="text" placeholder="Nueva categoría" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="flex-1 p-2 bg-slate-800 border border-slate-700 rounded" />
+                                <button type="button" onClick={handleAddCategory} className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm">Agregar</button>
+                                <button type="button" onClick={() => setShowNewCategory(false)} className="px-3 py-2 bg-slate-600 hover:bg-slate-700 rounded text-white text-sm">Cancelar</button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Selector de Marca */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-300">Marca</label>
+                        <div className="flex gap-2">
+                            <select name="brand" value={formData.brand} onChange={handleFormChange} className="flex-1 p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                                <option value="">Seleccionar marca</option>
+                                {brands.map(brand => (
+                                    <option key={brand} value={brand}>{brand}</option>
+                                ))}
+                            </select>
+                            <button type="button" onClick={() => setShowNewBrand(!showNewBrand)} className="px-3 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-bold">+</button>
+                        </div>
+                        {showNewBrand && (
+                            <div className="flex gap-2">
+                                <input type="text" placeholder="Nueva marca" value={newBrand} onChange={(e) => setNewBrand(e.target.value)} className="flex-1 p-2 bg-slate-800 border border-slate-700 rounded" />
+                                <button type="button" onClick={handleAddBrand} className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm">Agregar</button>
+                                <button type="button" onClick={() => setShowNewBrand(false)} className="px-3 py-2 bg-slate-600 hover:bg-slate-700 rounded text-white text-sm">Cancelar</button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -227,7 +306,7 @@ const Inventario: React.FC = () => {
     const context = useContext(AppContext);
     if (!context) return null;
 
-    const { user, products, addProduct, updateProduct, deleteProduct, uploadFile, upsertProducts, showToast, sucursales, branchStocks, syncProductToEcommerce } = context;
+    const { user, products, addProduct, updateProduct, deleteProduct, upsertProducts, showToast, sucursales, branchStocks, syncProductToEcommerce } = context;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined);
@@ -239,7 +318,7 @@ const Inventario: React.FC = () => {
             .reduce((total, bs) => total + bs.stock, 0);
     };
 
-    const handleSave = async (productData: Product, stockData: StockData[], imageFile?: File | null) => {
+    const handleSave = async (productData: Product, stockData: StockData[]) => {
         try {
             // Omitir subida de imagen temporalmente
             // let imageUrl = productData.image_url;
@@ -247,13 +326,13 @@ const Inventario: React.FC = () => {
 
             // Validar campos obligatorios de producto
             if (!productData.name || !productData.unit || !productData.description || !productData.category) {
-                showToast('Completa todos los campos obligatorios del producto', 'error');
+                showToast('Completa todos los campos obligatorios: nombre, unidad, descripción y categoría', 'error');
                 return;
             }
 
             // Validar sale_price en cada sucursal
             for (const s of stockData) {
-                if (s.sale_price === undefined || s.sale_price === null || s.sale_price === '' || isNaN(Number(s.sale_price))) {
+                if (s.sale_price === undefined || s.sale_price === null || s.sale_price === 0 || isNaN(Number(s.sale_price))) {
                     showToast('El precio de venta es obligatorio en todas las sucursales', 'error');
                     return;
                 }
@@ -262,45 +341,40 @@ const Inventario: React.FC = () => {
             if (productData.id) {
                 // Actualizar producto existente y branch_stock
                 const { id, created_at, user_id, ...updateData } = { ...productData };
+                // Filtrar campos que no están en la BD
+                const { barcode, brand, ...cleanUpdateData } = updateData as any;
+                
                 const cleanStockDataForUpdate = stockData.map(({ profit_margin, ...rest }) => ({
                     ...rest,
                     product_id: id,
                 }));
                 try {
-                    await updateProduct(id, updateData, cleanStockDataForUpdate);
+                    await updateProduct(id, cleanUpdateData, cleanStockDataForUpdate);
                 } catch (err) {
                     showToast('Error al actualizar producto o inventario', 'error');
                     return;
                 }
                 showToast('Producto actualizado con éxito', 'success');
             } else {
-                // Crear producto primero
+                // Crear producto con inventario en una sola operación
                 const { id, created_at, ...insertData } = productData;
-                const newProductData = { ...insertData, user_id: user.id, sku: insertData.sku || `SKU-${Date.now().toString().slice(-6)}` };
-                let createdProduct;
+                // Filtrar campos que no están en la BD
+                const { barcode, brand, ...cleanProductData } = insertData as any;
+                const newProductData = { 
+                    ...cleanProductData, 
+                    user_id: user.id, 
+                    sku: insertData.sku || `SKU-${Date.now().toString().slice(-6)}` 
+                };
+                
+                const cleanStockDataForInsert = stockData.map(({ profit_margin, ...rest }) => rest);
+                
                 try {
-                    createdProduct = await addProduct(newProductData, []); // No pasar stock aún
+                    await addProduct(newProductData, cleanStockDataForInsert);
+                    showToast('Producto e inventario creados con éxito', 'success');
                 } catch (err) {
-                    showToast('Error al crear el producto', 'error');
+                    showToast('Error al crear producto o inventario', 'error');
                     return;
                 }
-                const productId = createdProduct?.id;
-                if (!productId) {
-                    showToast('No se pudo obtener el ID del producto', 'error');
-                    return;
-                }
-                // Crear branch_stock para cada sucursal
-                const cleanStockDataForInsert = stockData.map(({ profit_margin, ...rest }) => ({
-                    ...rest,
-                    product_id: productId,
-                }));
-                try {
-                    await updateProduct(productId, {}, cleanStockDataForInsert); // updateProduct solo para branch_stock
-                } catch (err) {
-                    showToast('Error al crear inventario por sucursal', 'error');
-                    return;
-                }
-                showToast('Producto e inventario creados con éxito', 'success');
             }
             closeModal();
         } catch (error) {
