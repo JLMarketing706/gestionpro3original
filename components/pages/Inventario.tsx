@@ -249,9 +249,23 @@ const Inventario: React.FC = () => {
                 imageUrl = await uploadFile(imageFile, 'avatars', filePath) || productData.image_url;
             }
 
+            // Validar campos obligatorios de producto
+            if (!productData.name || !productData.unit || !productData.description || !productData.category) {
+                showToast('Completa todos los campos obligatorios del producto', 'error');
+                return;
+            }
+
+            // Validar sale_price en cada sucursal
+            for (const s of stockData) {
+                if (s.sale_price === undefined || s.sale_price === null || s.sale_price === '' || isNaN(Number(s.sale_price))) {
+                    showToast('El precio de venta es obligatorio en todas las sucursales', 'error');
+                    return;
+                }
+            }
+
             if (productData.id) {
+                // Actualizar producto existente y branch_stock
                 const { id, created_at, user_id, ...updateData } = { ...productData, image_url: imageUrl };
-                // Clean stockData for DB by removing profit_margin and adding product_id for upsert
                 const cleanStockDataForUpdate = stockData.map(({ profit_margin, ...rest }) => ({
                     ...rest,
                     product_id: id,
@@ -259,11 +273,22 @@ const Inventario: React.FC = () => {
                 await updateProduct(id, updateData, cleanStockDataForUpdate);
                 showToast('Producto actualizado con éxito', 'success');
             } else {
+                // Crear producto primero
                 const { id, created_at, ...insertData } = productData;
                 const newProductData = { ...insertData, image_url: imageUrl, user_id: user.id, sku: insertData.sku || `SKU-${Date.now().toString().slice(-6)}` };
-                // Clean stockData for DB by removing profit_margin
-                const cleanStockDataForInsert = stockData.map(({ profit_margin, ...rest }) => rest);
-                await addProduct(newProductData, cleanStockDataForInsert);
+                // addProduct debe devolver el id generado
+                const createdProduct = await addProduct(newProductData, []); // No pasar stock aún
+                const productId = createdProduct?.id;
+                if (!productId) {
+                    showToast('No se pudo crear el producto', 'error');
+                    return;
+                }
+                // Ahora crear branch_stock para cada sucursal
+                const cleanStockDataForInsert = stockData.map(({ profit_margin, ...rest }) => ({
+                    ...rest,
+                    product_id: productId,
+                }));
+                await updateProduct(productId, {}, cleanStockDataForInsert); // updateProduct solo para branch_stock
                 showToast('Producto creado con éxito', 'success');
             }
             closeModal();
