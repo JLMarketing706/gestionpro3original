@@ -312,20 +312,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
     }, []);
 
     const toggleNewCategory = useCallback(() => {
-        setShowNewCategory(!showNewCategory);
-    }, [showNewCategory]);
+        setShowNewCategory(prev => !prev);
+    }, []);
 
     const toggleNewSubcategory = useCallback(() => {
-        setShowNewSubcategory(!showNewSubcategory);
-    }, [showNewSubcategory]);
+        setShowNewSubcategory(prev => !prev);
+    }, []);
 
     const toggleNewBrand = useCallback(() => {
-        setShowNewBrand(!showNewBrand);
-    }, [showNewBrand]);
+        setShowNewBrand(prev => !prev);
+    }, []);
 
     const toggleNewSupplier = useCallback(() => {
-        setShowNewSupplier(!showNewSupplier);
-    }, [showNewSupplier]);
+        setShowNewSupplier(prev => !prev);
+    }, []);
 
     const cancelNewCategory = useCallback(() => {
         setShowNewCategory(false);
@@ -341,6 +341,23 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
 
     const cancelNewSupplier = useCallback(() => {
         setShowNewSupplier(false);
+    }, []);
+
+    // Funciones memoizadas para manejar cambios en nuevos valores
+    const handleNewCategoryChange = useCallback((value: string) => {
+        setNewCategory(value);
+    }, []);
+
+    const handleNewSubcategoryChange = useCallback((value: string) => {
+        setNewSubcategory(value);
+    }, []);
+
+    const handleNewBrandChange = useCallback((value: string) => {
+        setNewBrand(value);
+    }, []);
+
+    const handleNewSupplierChange = useCallback((value: string) => {
+        setNewSupplier(value);
     }, []);
 
     // Componente para búsqueda con autocompletado - VERSIÓN MEMOIZADA
@@ -572,7 +589,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                         showNew={showNewCategory}
                         onToggleNew={toggleNewCategory}
                         newValue={newCategory}
-                        onNewValueChange={setNewCategory}
+                        onNewValueChange={handleNewCategoryChange}
                         onSaveNew={handleAddCategory}
                         onCancelNew={cancelNewCategory}
                         placeholder="Buscar o escribir categoría"
@@ -588,7 +605,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                         showNew={showNewSubcategory}
                         onToggleNew={toggleNewSubcategory}
                         newValue={newSubcategory}
-                        onNewValueChange={setNewSubcategory}
+                        onNewValueChange={handleNewSubcategoryChange}
                         onSaveNew={handleAddSubcategory}
                         onCancelNew={cancelNewSubcategory}
                         placeholder="Buscar o escribir subcategoría"
@@ -603,7 +620,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                         showNew={showNewBrand}
                         onToggleNew={toggleNewBrand}
                         newValue={newBrand}
-                        onNewValueChange={setNewBrand}
+                        onNewValueChange={handleNewBrandChange}
                         onSaveNew={handleAddBrand}
                         onCancelNew={cancelNewBrand}
                         placeholder="Buscar o escribir marca"
@@ -618,7 +635,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                         showNew={showNewSupplier}
                         onToggleNew={toggleNewSupplier}
                         newValue={newSupplier}
-                        onNewValueChange={setNewSupplier}
+                        onNewValueChange={handleNewSupplierChange}
                         onSaveNew={handleAddSupplier}
                         onCancelNew={cancelNewSupplier}
                         placeholder="Buscar o escribir proveedor"
