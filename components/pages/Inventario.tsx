@@ -105,14 +105,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         if (!newCategory.trim() || categoriesList.includes(newCategory.trim())) return;
         
         try {
-            // Generar un ID único para la categoría
-            const categoryId = crypto.randomUUID();
-            
-            // Guardar en Supabase
             const { data, error } = await supabase
                 .from('categories')
                 .insert([{ 
-                    id: categoryId,
+                    id: crypto.randomUUID(),
                     name: newCategory.trim(),
                     description: null 
                 }])
@@ -121,15 +117,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
 
             if (error) throw error;
 
-            // Actualizar estado local
             setCategoriesList(prev => [...prev, newCategory.trim()]);
             setFormData(prev => ({ ...prev, category: newCategory.trim() }));
-            
-            // Limpiar y cerrar
             setNewCategory('');
             setShowNewCategory(false);
-            
-            // Mostrar notificación de éxito
             showToast('Categoría creada correctamente', 'success');
             
         } catch (error) {
@@ -142,14 +133,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         if (!newBrand.trim() || brandsList.includes(newBrand.trim())) return;
         
         try {
-            // Generar un ID único para la marca
-            const brandId = crypto.randomUUID();
-            
-            // Guardar en Supabase
             const { data, error } = await supabase
                 .from('brands')
                 .insert([{ 
-                    id: brandId,
+                    id: crypto.randomUUID(),
                     name: newBrand.trim()
                 }])
                 .select()
@@ -157,15 +144,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
 
             if (error) throw error;
 
-            // Actualizar estado local
             setBrandsList(prev => [...prev, newBrand.trim()]);
             setFormData(prev => ({ ...prev, brand: newBrand.trim() }));
-            
-            // Limpiar y cerrar
             setNewBrand('');
             setShowNewBrand(false);
-            
-            // Mostrar notificación de éxito
             showToast('Marca creada correctamente', 'success');
             
         } catch (error) {
@@ -177,45 +159,29 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
     const handleAddSubcategory = async () => {
         if (!newSubcategory.trim() || subcategoriesList.includes(newSubcategory.trim())) return;
         
-        // Verificar que haya una categoría seleccionada
-        if (!formData.category) {
-            showToast('Selecciona una categoría antes de crear una subcategoría', 'error');
-            return;
-        }
-        
         try {
-            // Buscar el ID de la categoría seleccionada
-            const selectedCategory = categories.find(c => c.name === formData.category);
-            if (!selectedCategory) {
-                showToast('Categoría no encontrada', 'error');
+            const categoryId = categories.find(c => c.name === formData.category)?.id;
+            if (!categoryId) {
+                showToast('Selecciona una categoría válida', 'error');
                 return;
             }
-            
-            // Generar un ID único para la subcategoría
-            const subcategoryId = crypto.randomUUID();
-            
-            // Guardar en Supabase
+
             const { data, error } = await supabase
                 .from('subcategories')
                 .insert([{ 
-                    id: subcategoryId,
+                    id: crypto.randomUUID(),
                     name: newSubcategory.trim(),
-                    category_id: selectedCategory.id
+                    category_id: categoryId
                 }])
                 .select()
                 .single();
 
             if (error) throw error;
 
-            // Actualizar estado local
             setSubcategoriesList(prev => [...prev, newSubcategory.trim()]);
             setFormData(prev => ({ ...prev, subcategory: newSubcategory.trim() }));
-            
-            // Limpiar y cerrar
             setNewSubcategory('');
             setShowNewSubcategory(false);
-            
-            // Mostrar notificación de éxito
             showToast('Subcategoría creada correctamente', 'success');
             
         } catch (error) {
@@ -228,37 +194,22 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         if (!newSupplier.trim() || suppliersList.includes(newSupplier.trim())) return;
         
         try {
-            // Generar un ID único para el proveedor
-            const supplierId = crypto.randomUUID();
-            
-            // Guardar en Supabase - note que suppliers requiere user_id
             const { data, error } = await supabase
                 .from('suppliers')
                 .insert([{ 
-                    id: supplierId,
+                    id: crypto.randomUUID(),
                     name: newSupplier.trim(),
-                    user_id: user.id, // Obtener user_id del contexto
-                    address: null,
-                    contact_person: null,
-                    cuit: null,
-                    email: null,
-                    notes: null,
-                    phone: null
+                    user_id: user.id
                 }])
                 .select()
                 .single();
 
             if (error) throw error;
 
-            // Actualizar estado local
             setSuppliersList(prev => [...prev, newSupplier.trim()]);
             setFormData(prev => ({ ...prev, supplier: newSupplier.trim() }));
-            
-            // Limpiar y cerrar
             setNewSupplier('');
             setShowNewSupplier(false);
-            
-            // Mostrar notificación de éxito
             showToast('Proveedor creado correctamente', 'success');
             
         } catch (error) {
