@@ -540,6 +540,9 @@ const Inventario: React.FC = () => {
 
     const handleSave = async (productData: Product, stockData: StockData[]) => {
         try {
+            console.log('💾 HandleSave iniciado - ProductData:', productData);
+            console.log('📦 StockData:', stockData);
+            
             // Omitir subida de imagen temporalmente
             // let imageUrl = productData.image_url;
             // if (imageFile) { ... }
