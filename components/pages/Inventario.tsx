@@ -330,10 +330,18 @@ const Inventario: React.FC = () => {
                 return;
             }
 
-            // Validar sale_price en cada sucursal
-            for (const s of stockData) {
-                if (s.sale_price === undefined || s.sale_price === null || s.sale_price === 0 || isNaN(Number(s.sale_price))) {
-                    showToast('El precio de venta es obligatorio en todas las sucursales', 'error');
+            // Filtrar solo las sucursales que tienen algún dato ingresado (stock, costo o precio)
+            const sucursalesWithData = stockData.filter(s => 
+                (s.stock && s.stock > 0) || 
+                (s.cost_price && s.cost_price > 0) || 
+                (s.sale_price && s.sale_price > 0)
+            );
+
+            // Validar que las sucursales con datos tengan precio de venta
+            for (const s of sucursalesWithData) {
+                if (!s.sale_price || s.sale_price <= 0) {
+                    const sucursal = sucursales.find(suc => suc.id === s.sucursal_id);
+                    showToast(`La sucursal "${sucursal?.name}" requiere un precio de venta válido`, 'error');
                     return;
                 }
             }
@@ -344,17 +352,18 @@ const Inventario: React.FC = () => {
                 // Filtrar campos que no están en la BD
                 const { barcode, brand, ...cleanUpdateData } = updateData as any;
                 
-                const cleanStockDataForUpdate = stockData.map(({ profit_margin, ...rest }) => ({
+                // Filtrar solo sucursales con datos válidos para actualización
+                const cleanStockDataForUpdate = sucursalesWithData.map(({ profit_margin, ...rest }) => ({
                     ...rest,
                     product_id: id,
                 }));
                 try {
                     await updateProduct(id, cleanUpdateData, cleanStockDataForUpdate);
+                    showToast('Producto actualizado con éxito', 'success');
                 } catch (err) {
                     showToast('Error al actualizar producto o inventario', 'error');
                     return;
                 }
-                showToast('Producto actualizado con éxito', 'success');
             } else {
                 // Crear producto con inventario en una sola operación
                 const { id, created_at, ...insertData } = productData;
@@ -366,11 +375,18 @@ const Inventario: React.FC = () => {
                     sku: insertData.sku || `SKU-${Date.now().toString().slice(-6)}` 
                 };
                 
-                const cleanStockDataForInsert = stockData.map(({ profit_margin, ...rest }) => rest);
+                // Filtrar solo sucursales con datos válidos para inserción
+                const cleanStockDataForInsert = sucursalesWithData.map(({ profit_margin, ...rest }) => rest);
                 
                 try {
-                    await addProduct(newProductData, cleanStockDataForInsert);
-                    showToast('Producto e inventario creados con éxito', 'success');
+                    if (cleanStockDataForInsert.length > 0) {
+                        await addProduct(newProductData, cleanStockDataForInsert);
+                        showToast('Producto e inventario creados con éxito', 'success');
+                    } else {
+                        // Crear solo el producto sin inventario
+                        await addProduct(newProductData, []);
+                        showToast('Producto creado con éxito. Puedes agregar inventario después.', 'success');
+                    }
                 } catch (err) {
                     showToast('Error al crear producto o inventario', 'error');
                     return;
