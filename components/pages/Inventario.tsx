@@ -2,7 +2,7 @@
 import React, { useState, useContext, useMemo } from 'react';
 import { AppContext } from '../../contexts/AppContext';
 import { CubeIcon, PlusIcon, CameraIcon, ArrowUpTrayIcon, ArrowPathIcon } from '../icons';
-import { Product, Sucursal, BranchStock } from '../../types';
+import { Product, Sucursal, BranchStock, Brand, Category, Subcategory, Supplier } from '../../types';
 import Modal from '../common/Modal';
 import DataTable, { Column } from '../common/DataTable';
 import BulkImportModal from '../common/BulkImportModal';
@@ -20,13 +20,17 @@ type ProductFormProps = {
     product?: Product; 
     sucursales: Sucursal[];
     branchStocks: BranchStock[];
+    brands: Brand[];
+    categories: Category[];
+    subcategories: Subcategory[];
+    suppliers: Supplier[];
     onSave: (product: Product, stockData: StockData[], imageFile?: File | null) => Promise<void>; 
     onCancel: () => void;
     onSync: (product: Product) => void;
     showToast: (message: string, type: 'success' | 'error' | 'info') => void;
 };
 
-const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchStocks, onSave, onCancel, onSync, showToast }) => {
+const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchStocks, brands, categories, subcategories, suppliers, onSave, onCancel, onSync, showToast }) => {
     const [formData, setFormData] = useState({
         sku: product?.sku || '',
         name: product?.name || '',
@@ -43,10 +47,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
     });
 
     // Estados para categorías, subcategorías, marcas y proveedores
-    const [categories, setCategories] = useState<string[]>(['Alimentos', 'Bebidas', 'Limpieza', 'Tecnología']);
-    const [subcategories, setSubcategories] = useState<string[]>(['Lácteos', 'Carnes', 'Frutas', 'Verduras']);
-    const [brands, setBrands] = useState<string[]>(['Sin marca', 'Coca Cola', 'Samsung', 'Apple']);
-    const [suppliers, setSuppliers] = useState<string[]>(['Proveedor A', 'Proveedor B', 'Distribuidora Central']);
+    const [categoriesList, setCategoriesList] = useState<string[]>(categories.map(c => c.name));
+    const [subcategoriesList, setSubcategoriesList] = useState<string[]>(subcategories.map(s => s.name));
+    const [brandsList, setBrandsList] = useState<string[]>(brands.map(b => b.name));
+    const [suppliersList, setSuppliersList] = useState<string[]>(suppliers.map(s => s.name));
     
     // Estados para mostrar/ocultar formularios de nuevos elementos
     const [showNewCategory, setShowNewCategory] = useState(false);
@@ -91,8 +95,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
     };
 
     const handleAddCategory = () => {
-        if (newCategory.trim() && !categories.includes(newCategory.trim())) {
-            setCategories(prev => [...prev, newCategory.trim()]);
+        if (newCategory.trim() && !categoriesList.includes(newCategory.trim())) {
+            setCategoriesList(prev => [...prev, newCategory.trim()]);
             setFormData(prev => ({ ...prev, category: newCategory.trim() }));
             setNewCategory('');
             setShowNewCategory(false);
@@ -100,8 +104,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
     };
 
     const handleAddBrand = () => {
-        if (newBrand.trim() && !brands.includes(newBrand.trim())) {
-            setBrands(prev => [...prev, newBrand.trim()]);
+        if (newBrand.trim() && !brandsList.includes(newBrand.trim())) {
+            setBrandsList(prev => [...prev, newBrand.trim()]);
             setFormData(prev => ({ ...prev, brand: newBrand.trim() }));
             setNewBrand('');
             setShowNewBrand(false);
@@ -109,8 +113,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
     };
 
     const handleAddSubcategory = () => {
-        if (newSubcategory.trim() && !subcategories.includes(newSubcategory.trim())) {
-            setSubcategories(prev => [...prev, newSubcategory.trim()]);
+        if (newSubcategory.trim() && !subcategoriesList.includes(newSubcategory.trim())) {
+            setSubcategoriesList(prev => [...prev, newSubcategory.trim()]);
             setFormData(prev => ({ ...prev, subcategory: newSubcategory.trim() }));
             setNewSubcategory('');
             setShowNewSubcategory(false);
@@ -118,8 +122,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
     };
 
     const handleAddSupplier = () => {
-        if (newSupplier.trim() && !suppliers.includes(newSupplier.trim())) {
-            setSuppliers(prev => [...prev, newSupplier.trim()]);
+        if (newSupplier.trim() && !suppliersList.includes(newSupplier.trim())) {
+            setSuppliersList(prev => [...prev, newSupplier.trim()]);
             setFormData(prev => ({ ...prev, supplier: newSupplier.trim() }));
             setNewSupplier('');
             setShowNewSupplier(false);
@@ -215,6 +219,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         const [isOpen, setIsOpen] = useState(false);
         const [searchTerm, setSearchTerm] = useState(value);
 
+        // Sincronizar searchTerm con value cuando cambie externamente
+        React.useEffect(() => {
+            setSearchTerm(value);
+        }, [value]);
+
         const filteredOptions = options.filter(option =>
             option.toLowerCase().includes(searchTerm.toLowerCase())
         );
@@ -232,6 +241,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             setIsOpen(false);
         };
 
+        const handleBlur = () => {
+            // Cerrar dropdown después de un delay para permitir clicks en opciones
+            setTimeout(() => setIsOpen(false), 150);
+        };
+
         return (
             <div className="space-y-2 relative">
                 <label className="text-sm font-medium text-slate-300">
@@ -244,7 +258,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                             value={searchTerm}
                             onChange={handleInputChange}
                             onFocus={() => setIsOpen(true)}
-                            onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+                            onBlur={handleBlur}
                             placeholder={placeholder}
                             required={required}
                             className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500"
@@ -254,7 +268,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                                 {filteredOptions.map((option, index) => (
                                     <div
                                         key={index}
-                                        onClick={() => handleOptionClick(option)}
+                                        onMouseDown={(e) => {
+                                            // Prevenir que el input pierda el foco
+                                            e.preventDefault();
+                                            handleOptionClick(option);
+                                        }}
                                         className="p-2 hover:bg-slate-700 cursor-pointer text-slate-200"
                                     >
                                         {option}
@@ -348,7 +366,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                         label="Categoría"
                         value={formData.category}
                         onChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
-                        options={categories}
+                        options={categoriesList}
                         showNew={showNewCategory}
                         onToggleNew={() => setShowNewCategory(!showNewCategory)}
                         newValue={newCategory}
@@ -364,7 +382,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                         label="Subcategoría"
                         value={formData.subcategory}
                         onChange={(value) => setFormData(prev => ({ ...prev, subcategory: value }))}
-                        options={subcategories}
+                        options={subcategoriesList}
                         showNew={showNewSubcategory}
                         onToggleNew={() => setShowNewSubcategory(!showNewSubcategory)}
                         newValue={newSubcategory}
@@ -379,7 +397,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                         label="Marca"
                         value={formData.brand}
                         onChange={(value) => setFormData(prev => ({ ...prev, brand: value }))}
-                        options={brands}
+                        options={brandsList}
                         showNew={showNewBrand}
                         onToggleNew={() => setShowNewBrand(!showNewBrand)}
                         newValue={newBrand}
@@ -394,7 +412,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                         label="Proveedor"
                         value={formData.supplier}
                         onChange={(value) => setFormData(prev => ({ ...prev, supplier: value }))}
-                        options={suppliers}
+                        options={suppliersList}
                         showNew={showNewSupplier}
                         onToggleNew={() => setShowNewSupplier(!showNewSupplier)}
                         newValue={newSupplier}
@@ -475,7 +493,7 @@ const Inventario: React.FC = () => {
     const context = useContext(AppContext);
     if (!context) return null;
 
-    const { user, products, addProduct, updateProduct, deleteProduct, upsertProducts, showToast, sucursales, branchStocks, syncProductToEcommerce } = context;
+    const { user, products, addProduct, updateProduct, deleteProduct, upsertProducts, showToast, sucursales, branchStocks, brands, categories, subcategories, suppliers, syncProductToEcommerce } = context;
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | undefined>(undefined);
@@ -518,8 +536,19 @@ const Inventario: React.FC = () => {
             if (productData.id) {
                 // Actualizar producto existente y branch_stock
                 const { id, created_at, user_id, ...updateData } = { ...productData };
-                // Filtrar campos que no están en la BD
-                const { barcode, brand, subcategory, long_description, supplier, ...cleanUpdateData } = updateData as any;
+                
+                // Convertir strings a IDs para campos relacionales
+                const processedUpdateData = {
+                    ...updateData,
+                    brand_id: (updateData as any).brand ? brands.find(b => b.name === (updateData as any).brand)?.id || null : null,
+                    subcategory_id: (updateData as any).subcategory ? subcategories.find(s => s.name === (updateData as any).subcategory)?.id || null : null,
+                    supplier_id: (updateData as any).supplier ? suppliers.find(s => s.name === (updateData as any).supplier)?.id || null : null,
+                    long_description: (updateData as any).long_description || null,
+                    barcode: (updateData as any).barcode || null
+                };
+                
+                // Remover campos temporales UI
+                const { brand, subcategory, supplier, ...cleanUpdateData } = processedUpdateData as any;
                 
                 // Filtrar solo sucursales con datos válidos para actualización
                 const cleanStockDataForUpdate = sucursalesWithData.map(({ profit_margin, ...rest }) => ({
@@ -536,8 +565,20 @@ const Inventario: React.FC = () => {
             } else {
                 // Crear producto con inventario en una sola operación
                 const { id, created_at, ...insertData } = productData;
-                // Filtrar campos que no están en la BD
-                const { barcode, brand, subcategory, long_description, supplier, ...cleanProductData } = insertData as any;
+                
+                // Convertir strings a IDs para campos relacionales
+                const processedInsertData = {
+                    ...insertData,
+                    brand_id: (insertData as any).brand ? brands.find(b => b.name === (insertData as any).brand)?.id || null : null,
+                    subcategory_id: (insertData as any).subcategory ? subcategories.find(s => s.name === (insertData as any).subcategory)?.id || null : null,
+                    supplier_id: (insertData as any).supplier ? suppliers.find(s => s.name === (insertData as any).supplier)?.id || null : null,
+                    long_description: (insertData as any).long_description || null,
+                    barcode: (insertData as any).barcode || null
+                };
+                
+                // Remover campos temporales UI
+                const { brand, subcategory, supplier, ...cleanProductData } = processedInsertData as any;
+                
                 const newProductData = { 
                     ...cleanProductData, 
                     user_id: user.id, 
@@ -680,6 +721,10 @@ const Inventario: React.FC = () => {
                 onCancel={closeModal} 
                 sucursales={sucursales}
                 branchStocks={branchStocks}
+                brands={brands}
+                categories={categories}
+                subcategories={subcategories}
+                suppliers={suppliers}
                 onSync={syncProductToEcommerce}
                 showToast={showToast}
               />
