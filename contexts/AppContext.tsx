@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { Config, Customer, Product, SaleDocument, DocumentStatus, Supplier, UserProfile, SaleItem, ProductUpdate, Role, Sucursal, SystemUser, BranchStock, EcommerceIntegration, IntegrationPlatform, EcommerceOrder, SimulatedOrderLineItem, SyncLog, SyncConfig } from '../types';
+import { Config, Customer, Product, SaleDocument, DocumentStatus, Supplier, UserProfile, SaleItem, ProductUpdate, Role, Sucursal, SystemUser, BranchStock, EcommerceIntegration, IntegrationPlatform, EcommerceOrder, SimulatedOrderLineItem, SyncLog, SyncConfig, Brand, Category, Subcategory } from '../types';
 import { supabase } from '../services/supabase';
 import { showToast, ToastType } from '../components/common/Toast';
 import { Database, Json } from '../services/database.types';
@@ -41,6 +41,9 @@ interface AppContextType {
     roles: Role[];
     sucursales: Sucursal[];
     branchStocks: BranchStock[];
+    brands: Brand[];
+    categories: Category[];
+    subcategories: Subcategory[];
     config: Config;
     customers: Customer[];
     products: Product[];
@@ -89,6 +92,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
     const [roles, setRoles] = useState<Role[]>([]);
     const [sucursales, setSucursales] = useState<Sucursal[]>([]);
     const [branchStocks, setBranchStocks] = useState<BranchStock[]>([]);
+    const [brands, setBrands] = useState<Brand[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
     const [ecommerceIntegrations, setEcommerceIntegrations] = useState<EcommerceIntegration[]>([]);
     const [ecommerceOrders, setEcommerceOrders] = useState<EcommerceOrder[]>([]);
     const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
@@ -100,7 +106,7 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
             setIsLoading(true);
             try {
                 // Step 1: Fetch primary data, but without the failing `profiles` join.
-                const [customersRes, productsRes, documentsRes, suppliersRes, profilesRes, rolesRes, sucursalesRes, integrationsRes, ordersRes] = await Promise.all([
+                const [customersRes, productsRes, documentsRes, suppliersRes, profilesRes, rolesRes, sucursalesRes, integrationsRes, ordersRes, brandsRes, categoriesRes, subcategoriesRes] = await Promise.all([
                     supabase.from('customers').select('*').eq('user_id', user.id),
                     supabase.from('products').select('*').eq('user_id', user.id),
                     supabase.from('documents').select('*').eq('user_id', user.id),
@@ -109,7 +115,10 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
                     supabase.from('roles').select('*'),
                     supabase.from('sucursales').select('*').eq('user_id', user.id),
                     supabase.from('ecommerce_integrations').select('*').eq('user_id', user.id),
-                    supabase.from('ecommerce_orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+                    supabase.from('ecommerce_orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+                    supabase.from('brands').select('*'),
+                    supabase.from('categories').select('*'),
+                    supabase.from('subcategories').select('*, categories(name)')
                 ]);
 
                 // Abort if any critical fetch fails
@@ -122,12 +131,18 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
                 if (sucursalesRes.error) throw sucursalesRes.error;
                 if (integrationsRes.error) throw integrationsRes.error;
                 if (ordersRes.error) throw ordersRes.error;
+                if (brandsRes.error) console.warn('Error loading brands:', brandsRes.error);
+                if (categoriesRes.error) console.warn('Error loading categories:', categoriesRes.error);
+                if (subcategoriesRes.error) console.warn('Error loading subcategories:', subcategoriesRes.error);
                 
                 // Set state for primary data
                 setCustomers(customersRes.data || []);
                 setProducts(productsRes.data || []);
                 setDocuments((documentsRes.data as unknown as SaleDocument[]) || []);
                 setSuppliers(suppliersRes.data || []);
+                setBrands(brandsRes.data || []);
+                setCategories(categoriesRes.data || []);
+                setSubcategories(subcategoriesRes.data || []);
                 const rolesData = rolesRes.data || [];
                 setRoles(rolesData);
                 const sucursalesData = sucursalesRes.data || [];
@@ -709,6 +724,9 @@ export const AppContextProvider: React.FC<{ children: ReactNode, user: UserProfi
         roles,
         sucursales,
         branchStocks,
+        brands,
+        categories,
+        subcategories,
         config: user.config as unknown as Config,
         customers,
         products,
