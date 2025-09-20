@@ -133,6 +133,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         if (!newBrand.trim() || brandsList.includes(newBrand.trim())) return;
         
         try {
+            console.log('Intentando guardar marca:', newBrand.trim());
             const { data, error } = await supabase
                 .from('brands')
                 .insert([{ 
@@ -141,6 +142,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                 }])
                 .select()
                 .single();
+
+            console.log('Respuesta Supabase brands:', data);
+            console.log('Error si existe:', error);
 
             if (error) throw error;
 
@@ -194,6 +198,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         if (!newSupplier.trim() || suppliersList.includes(newSupplier.trim())) return;
         
         try {
+            console.log('Intentando guardar proveedor:', newSupplier.trim());
             const { data, error } = await supabase
                 .from('suppliers')
                 .insert([{ 
@@ -203,6 +208,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                 }])
                 .select()
                 .single();
+
+            console.log('Respuesta Supabase suppliers:', data);
+            console.log('Error si existe:', error);
 
             if (error) throw error;
 
@@ -341,7 +349,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             const inputValue = e.target.value;
             setSearchTerm(inputValue);
-            // NO llamamos onChange inmediatamente - solo cuando se pierde el foco o se selecciona
+            // NO LLAMAR onChange aquí - esto causa el re-renderizado
             setIsOpen(true);
         };
 
