@@ -23,9 +23,10 @@ type ProductFormProps = {
     onSave: (product: Product, stockData: StockData[], imageFile?: File | null) => Promise<void>; 
     onCancel: () => void;
     onSync: (product: Product) => void;
+    showToast: (message: string, type: 'success' | 'error' | 'info') => void;
 };
 
-const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchStocks, onSave, onCancel, onSync }) => {
+const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchStocks, onSave, onCancel, onSync, showToast }) => {
     const [formData, setFormData] = useState({
         sku: product?.sku || '',
         name: product?.name || '',
@@ -34,17 +35,30 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         is_active: product?.is_active ?? true,
         description: product?.description || '',
         category: product?.category || '',
+        subcategory: '', // Nuevo campo
+        long_description: '', // Nuevo campo para e-commerce
+        supplier: '', // Nuevo campo proveedor
         barcode: '', // Campo adicional temporal
         brand: ''   // Campo adicional temporal
     });
 
-    // Estados para categorías y marcas
+    // Estados para categorías, subcategorías, marcas y proveedores
     const [categories, setCategories] = useState<string[]>(['Alimentos', 'Bebidas', 'Limpieza', 'Tecnología']);
+    const [subcategories, setSubcategories] = useState<string[]>(['Lácteos', 'Carnes', 'Frutas', 'Verduras']);
     const [brands, setBrands] = useState<string[]>(['Sin marca', 'Coca Cola', 'Samsung', 'Apple']);
+    const [suppliers, setSuppliers] = useState<string[]>(['Proveedor A', 'Proveedor B', 'Distribuidora Central']);
+    
+    // Estados para mostrar/ocultar formularios de nuevos elementos
     const [showNewCategory, setShowNewCategory] = useState(false);
+    const [showNewSubcategory, setShowNewSubcategory] = useState(false);
     const [showNewBrand, setShowNewBrand] = useState(false);
+    const [showNewSupplier, setShowNewSupplier] = useState(false);
+    
+    // Estados para nuevos elementos
     const [newCategory, setNewCategory] = useState('');
+    const [newSubcategory, setNewSubcategory] = useState('');
     const [newBrand, setNewBrand] = useState('');
+    const [newSupplier, setNewSupplier] = useState('');
     
     const [stockBySucursal, setStockBySucursal] = useState<StockData[]>(() => 
         sucursales.map(s => {
@@ -91,6 +105,24 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             setFormData(prev => ({ ...prev, brand: newBrand.trim() }));
             setNewBrand('');
             setShowNewBrand(false);
+        }
+    };
+
+    const handleAddSubcategory = () => {
+        if (newSubcategory.trim() && !subcategories.includes(newSubcategory.trim())) {
+            setSubcategories(prev => [...prev, newSubcategory.trim()]);
+            setFormData(prev => ({ ...prev, subcategory: newSubcategory.trim() }));
+            setNewSubcategory('');
+            setShowNewSubcategory(false);
+        }
+    };
+
+    const handleAddSupplier = () => {
+        if (newSupplier.trim() && !suppliers.includes(newSupplier.trim())) {
+            setSuppliers(prev => [...prev, newSupplier.trim()]);
+            setFormData(prev => ({ ...prev, supplier: newSupplier.trim() }));
+            setNewSupplier('');
+            setShowNewSupplier(false);
         }
     };
     
@@ -162,6 +194,112 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         }
     };
 
+    // Componente para búsqueda con autocompletado
+    const SearchableSelect: React.FC<{
+        label: string;
+        value: string;
+        onChange: (value: string) => void;
+        options: string[];
+        showNew: boolean;
+        onToggleNew: () => void;
+        newValue: string;
+        onNewValueChange: (value: string) => void;
+        onSaveNew: () => void;
+        onCancelNew: () => void;
+        placeholder: string;
+        required?: boolean;
+    }> = ({
+        label, value, onChange, options, showNew, onToggleNew,
+        newValue, onNewValueChange, onSaveNew, onCancelNew, placeholder, required = false
+    }) => {
+        const [isOpen, setIsOpen] = useState(false);
+        const [searchTerm, setSearchTerm] = useState(value);
+
+        const filteredOptions = options.filter(option =>
+            option.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const inputValue = e.target.value;
+            setSearchTerm(inputValue);
+            onChange(inputValue);
+            setIsOpen(true);
+        };
+
+        const handleOptionClick = (option: string) => {
+            setSearchTerm(option);
+            onChange(option);
+            setIsOpen(false);
+        };
+
+        return (
+            <div className="space-y-2 relative">
+                <label className="text-sm font-medium text-slate-300">
+                    {label} {required && '*'}
+                </label>
+                <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={handleInputChange}
+                            onFocus={() => setIsOpen(true)}
+                            onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+                            placeholder={placeholder}
+                            required={required}
+                            className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                        />
+                        {isOpen && filteredOptions.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                {filteredOptions.map((option, index) => (
+                                    <div
+                                        key={index}
+                                        onClick={() => handleOptionClick(option)}
+                                        className="p-2 hover:bg-slate-700 cursor-pointer text-slate-200"
+                                    >
+                                        {option}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <button 
+                        type="button" 
+                        onClick={onToggleNew} 
+                        className="px-3 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-bold"
+                    >
+                        +
+                    </button>
+                </div>
+                {showNew && (
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            placeholder={`Nuevo ${label.toLowerCase()}`}
+                            value={newValue}
+                            onChange={(e) => onNewValueChange(e.target.value)}
+                            className="flex-1 p-2 bg-slate-800 border border-slate-700 rounded"
+                        />
+                        <button 
+                            type="button" 
+                            onClick={onSaveNew} 
+                            className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm"
+                        >
+                            Agregar
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={onCancelNew} 
+                            className="px-3 py-2 bg-slate-600 hover:bg-slate-700 rounded text-white text-sm"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto p-1">
             <h2 className="text-2xl font-bold text-slate-100">{product ? 'Editar Producto' : 'Nuevo Producto'}</h2>
@@ -201,49 +339,70 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                         <option value="par">Par</option>
                     </select>
 
-                    <textarea name="description" placeholder="Descripción del producto" value={formData.description} onChange={handleFormChange} required rows={2} className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+                    <textarea name="description" placeholder="Descripción breve del producto" value={formData.description} onChange={handleFormChange} required rows={2} className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
                     
-                    {/* Selector de Categoría */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Categoría *</label>
-                        <div className="flex gap-2">
-                            <select name="category" value={formData.category} onChange={handleFormChange} required className="flex-1 p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                                <option value="">Seleccionar categoría</option>
-                                {categories.map(cat => (
-                                    <option key={cat} value={cat}>{cat}</option>
-                                ))}
-                            </select>
-                            <button type="button" onClick={() => setShowNewCategory(!showNewCategory)} className="px-3 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-bold">+</button>
-                        </div>
-                        {showNewCategory && (
-                            <div className="flex gap-2">
-                                <input type="text" placeholder="Nueva categoría" value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="flex-1 p-2 bg-slate-800 border border-slate-700 rounded" />
-                                <button type="button" onClick={handleAddCategory} className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm">Agregar</button>
-                                <button type="button" onClick={() => setShowNewCategory(false)} className="px-3 py-2 bg-slate-600 hover:bg-slate-700 rounded text-white text-sm">Cancelar</button>
-                            </div>
-                        )}
-                    </div>
+                    <textarea name="long_description" placeholder="Descripción detallada para e-commerce (opcional)" value={formData.long_description} onChange={handleFormChange} rows={3} className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+                    
+                    {/* Categoría con búsqueda */}
+                    <SearchableSelect
+                        label="Categoría"
+                        value={formData.category}
+                        onChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                        options={categories}
+                        showNew={showNewCategory}
+                        onToggleNew={() => setShowNewCategory(!showNewCategory)}
+                        newValue={newCategory}
+                        onNewValueChange={setNewCategory}
+                        onSaveNew={handleAddCategory}
+                        onCancelNew={() => setShowNewCategory(false)}
+                        placeholder="Buscar o escribir categoría"
+                        required
+                    />
 
-                    {/* Selector de Marca */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-300">Marca</label>
-                        <div className="flex gap-2">
-                            <select name="brand" value={formData.brand} onChange={handleFormChange} className="flex-1 p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                                <option value="">Seleccionar marca</option>
-                                {brands.map(brand => (
-                                    <option key={brand} value={brand}>{brand}</option>
-                                ))}
-                            </select>
-                            <button type="button" onClick={() => setShowNewBrand(!showNewBrand)} className="px-3 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-bold">+</button>
-                        </div>
-                        {showNewBrand && (
-                            <div className="flex gap-2">
-                                <input type="text" placeholder="Nueva marca" value={newBrand} onChange={(e) => setNewBrand(e.target.value)} className="flex-1 p-2 bg-slate-800 border border-slate-700 rounded" />
-                                <button type="button" onClick={handleAddBrand} className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm">Agregar</button>
-                                <button type="button" onClick={() => setShowNewBrand(false)} className="px-3 py-2 bg-slate-600 hover:bg-slate-700 rounded text-white text-sm">Cancelar</button>
-                            </div>
-                        )}
-                    </div>
+                    {/* Subcategoría con búsqueda */}
+                    <SearchableSelect
+                        label="Subcategoría"
+                        value={formData.subcategory}
+                        onChange={(value) => setFormData(prev => ({ ...prev, subcategory: value }))}
+                        options={subcategories}
+                        showNew={showNewSubcategory}
+                        onToggleNew={() => setShowNewSubcategory(!showNewSubcategory)}
+                        newValue={newSubcategory}
+                        onNewValueChange={setNewSubcategory}
+                        onSaveNew={handleAddSubcategory}
+                        onCancelNew={() => setShowNewSubcategory(false)}
+                        placeholder="Buscar o escribir subcategoría"
+                    />
+
+                    {/* Marca con búsqueda */}
+                    <SearchableSelect
+                        label="Marca"
+                        value={formData.brand}
+                        onChange={(value) => setFormData(prev => ({ ...prev, brand: value }))}
+                        options={brands}
+                        showNew={showNewBrand}
+                        onToggleNew={() => setShowNewBrand(!showNewBrand)}
+                        newValue={newBrand}
+                        onNewValueChange={setNewBrand}
+                        onSaveNew={handleAddBrand}
+                        onCancelNew={() => setShowNewBrand(false)}
+                        placeholder="Buscar o escribir marca"
+                    />
+
+                    {/* Proveedor con búsqueda */}
+                    <SearchableSelect
+                        label="Proveedor"
+                        value={formData.supplier}
+                        onChange={(value) => setFormData(prev => ({ ...prev, supplier: value }))}
+                        options={suppliers}
+                        showNew={showNewSupplier}
+                        onToggleNew={() => setShowNewSupplier(!showNewSupplier)}
+                        newValue={newSupplier}
+                        onNewValueChange={setNewSupplier}
+                        onSaveNew={handleAddSupplier}
+                        onCancelNew={() => setShowNewSupplier(false)}
+                        placeholder="Buscar o escribir proveedor"
+                    />
                 </div>
             </div>
 
@@ -287,12 +446,22 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                 <span>Producto Activo (visible para la venta)</span>
             </label>
             <div className="flex justify-between items-center gap-4 pt-4">
-                 {product && (
-                     <button type="button" onClick={handleSync} className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors font-bold text-sm">
-                        <ArrowPathIcon className="h-5 w-5"/>
-                        <span>Sincronizar con E-commerce</span>
-                    </button>
-                 )}
+                 <div className="flex gap-2">
+                     {product && (
+                         <button type="button" onClick={handleSync} className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors font-bold text-sm">
+                            <ArrowPathIcon className="h-5 w-5"/>
+                            <span>Sincronizar con E-commerce</span>
+                        </button>
+                     )}
+                     <button 
+                         type="button" 
+                         onClick={() => showToast('Funcionalidad próximamente disponible', 'info')} 
+                         className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors font-bold text-sm"
+                     >
+                         <ArrowUpTrayIcon className="h-5 w-5"/>
+                         <span>Subir a Tienda</span>
+                     </button>
+                 </div>
                 <div className="flex justify-end gap-4 flex-grow">
                     <button type="button" onClick={onCancel} className="px-6 py-2 bg-slate-600 hover:bg-slate-700 rounded-lg transition-colors">Cancelar</button>
                     <button type="submit" className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors font-bold">Guardar Producto</button>
@@ -350,7 +519,7 @@ const Inventario: React.FC = () => {
                 // Actualizar producto existente y branch_stock
                 const { id, created_at, user_id, ...updateData } = { ...productData };
                 // Filtrar campos que no están en la BD
-                const { barcode, brand, ...cleanUpdateData } = updateData as any;
+                const { barcode, brand, subcategory, long_description, supplier, ...cleanUpdateData } = updateData as any;
                 
                 // Filtrar solo sucursales con datos válidos para actualización
                 const cleanStockDataForUpdate = sucursalesWithData.map(({ profit_margin, ...rest }) => ({
@@ -368,7 +537,7 @@ const Inventario: React.FC = () => {
                 // Crear producto con inventario en una sola operación
                 const { id, created_at, ...insertData } = productData;
                 // Filtrar campos que no están en la BD
-                const { barcode, brand, ...cleanProductData } = insertData as any;
+                const { barcode, brand, subcategory, long_description, supplier, ...cleanProductData } = insertData as any;
                 const newProductData = { 
                     ...cleanProductData, 
                     user_id: user.id, 
@@ -512,6 +681,7 @@ const Inventario: React.FC = () => {
                 sucursales={sucursales}
                 branchStocks={branchStocks}
                 onSync={syncProductToEcommerce}
+                showToast={showToast}
               />
           </Modal>
       )}
