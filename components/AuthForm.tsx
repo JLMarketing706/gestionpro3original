@@ -131,7 +131,7 @@ const AuthForm: React.FC = () => {
               </div>
               <input
                 id="name" name="name" type="text" autoComplete="name" required
-                className="w-full pl-10 p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-slate-500"
+                className="w-full pl-10 p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-slate-500 text-slate-100"
                 placeholder="Nombre completo"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -145,7 +145,7 @@ const AuthForm: React.FC = () => {
             </div>
             <input
               id="email" name="email" type="email" autoComplete="email" required
-              className="w-full pl-10 p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-slate-500"
+              className="w-full pl-10 p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-slate-500 text-slate-100"
               placeholder="Correo electrónico"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -160,7 +160,7 @@ const AuthForm: React.FC = () => {
               id="password" name="password" type="password"
               autoComplete={isLoginView ? "current-password" : "new-password"}
               required
-              className="w-full pl-10 p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-slate-500"
+              className="w-full pl-10 p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-slate-500 text-slate-100"
               placeholder="Contraseña"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -175,7 +175,7 @@ const AuthForm: React.FC = () => {
               <input
                 id="confirm-password" name="confirm-password" type="password"
                 autoComplete="new-password" required
-                className="w-full pl-10 p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-slate-500"
+                className="w-full pl-10 p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors placeholder-slate-500 text-slate-100"
                 placeholder="Confirmar contraseña"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
