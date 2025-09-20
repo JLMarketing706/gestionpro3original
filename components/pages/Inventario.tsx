@@ -203,7 +203,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         }
     };
 
-    // Componente para búsqueda con autocompletado
+    // Componente para búsqueda con autocompletado - VERSIÓN CORREGIDA
     const SearchableSelect: React.FC<{
         label: string;
         value: string;
@@ -225,13 +225,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         const [searchTerm, setSearchTerm] = useState(value);
         const [isFocused, setIsFocused] = useState(false);
         const dropdownRef = useRef<HTMLDivElement>(null);
+        const inputRef = useRef<HTMLInputElement>(null);
 
-        // Sincronizar searchTerm con value cuando cambie externamente
+        // Sincronizar searchTerm con value solo cuando no está enfocado
         React.useEffect(() => {
-            if (!isFocused) {
+            if (!isFocused && value !== searchTerm) {
                 setSearchTerm(value);
             }
-        }, [value, isFocused]);
+        }, [value]); // Removimos isFocused de las dependencias
 
         // Cerrar dropdown al hacer clic fuera
         React.useEffect(() => {
@@ -239,12 +240,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                 if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                     setIsOpen(false);
                     setIsFocused(false);
+                    // Solo actualizar el padre si el valor cambió
+                    if (searchTerm !== value) {
+                        onChange(searchTerm);
+                    }
                 }
             };
 
             document.addEventListener('mousedown', handleClickOutside);
             return () => document.removeEventListener('mousedown', handleClickOutside);
-        }, []);
+        }, [searchTerm, value, onChange]);
 
         const filteredOptions = options.filter(option =>
             option.toLowerCase().includes(searchTerm.toLowerCase())
@@ -253,13 +258,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             const inputValue = e.target.value;
             setSearchTerm(inputValue);
-            onChange(inputValue);
+            // NO llamamos onChange inmediatamente - solo cuando se pierde el foco o se selecciona
             setIsOpen(true);
         };
 
         const handleOptionClick = (option: string) => {
             setSearchTerm(option);
-            onChange(option);
+            onChange(option); // Solo aquí actualizamos el padre
             setIsOpen(false);
             setIsFocused(false);
         };
@@ -275,8 +280,24 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                 if (!dropdownRef.current?.matches(':hover')) {
                     setIsFocused(false);
                     setIsOpen(false);
+                    // Actualizar el padre solo al perder el foco
+                    if (searchTerm !== value) {
+                        onChange(searchTerm);
+                    }
                 }
             }, 150);
+        };
+
+        const handleKeyDown = (e: React.KeyboardEvent) => {
+            if (e.key === 'Enter' && filteredOptions.length > 0) {
+                e.preventDefault();
+                handleOptionClick(filteredOptions[0]);
+            }
+            if (e.key === 'Escape') {
+                setIsOpen(false);
+                setIsFocused(false);
+                inputRef.current?.blur();
+            }
         };
 
         return (
@@ -287,11 +308,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                 <div className="flex gap-2">
                     <div className="flex-1 relative">
                         <input
+                            ref={inputRef}
                             type="text"
                             value={searchTerm}
                             onChange={handleInputChange}
                             onFocus={handleFocus}
                             onBlur={handleBlur}
+                            onKeyDown={handleKeyDown}
                             placeholder={placeholder}
                             required={required}
                             className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500"
@@ -300,7 +323,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                             <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                                 {filteredOptions.map((option, index) => (
                                     <div
-                                        key={index}
+                                        key={`${option}-${index}`}
                                         onClick={() => handleOptionClick(option)}
                                         className="p-2 hover:bg-slate-700 cursor-pointer text-slate-200"
                                     >
