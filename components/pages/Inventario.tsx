@@ -102,7 +102,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
     };
 
     const handleAddCategory = useCallback(async () => {
-        if (!newCategory.trim() || categoriesList.includes(newCategory.trim())) return;
+        if (!newCategory.trim()) return;
+        
+        // Verificar duplicados usando callback en setState
+        setCategoriesList(prev => {
+            if (prev.includes(newCategory.trim())) {
+                return prev; // No hacer nada si ya existe
+            }
+            return [...prev, newCategory.trim()];
+        });
         
         try {
             const { data, error } = await supabase
@@ -117,7 +125,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
 
             if (error) throw error;
 
-            setCategoriesList(prev => [...prev, newCategory.trim()]);
             setFormData(prev => ({ ...prev, category: newCategory.trim() }));
             setNewCategory('');
             setShowNewCategory(false);
@@ -127,10 +134,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             console.error('Error al crear categoría:', error);
             showToast('Error al crear la categoría', 'error');
         }
-    }, [newCategory, categoriesList, showToast]);
+    }, [newCategory, showToast]);
 
     const handleAddBrand = useCallback(async () => {
-        if (!newBrand.trim() || brandsList.includes(newBrand.trim())) return;
+        if (!newBrand.trim()) return;
+        
+        // Verificar duplicados usando callback en setState
+        setBrandsList(prev => {
+            if (prev.includes(newBrand.trim())) {
+                return prev; // No hacer nada si ya existe
+            }
+            return [...prev, newBrand.trim()];
+        });
         
         try {
             console.log('Intentando guardar marca:', newBrand.trim());
@@ -148,7 +163,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
 
             if (error) throw error;
 
-            setBrandsList(prev => [...prev, newBrand.trim()]);
             setFormData(prev => ({ ...prev, brand: newBrand.trim() }));
             setNewBrand('');
             setShowNewBrand(false);
@@ -158,10 +172,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             console.error('Error al crear marca:', error);
             showToast('Error al crear la marca', 'error');
         }
-    }, [newBrand, brandsList, showToast]);
+    }, [newBrand, showToast]);
 
     const handleAddSubcategory = useCallback(async () => {
-        if (!newSubcategory.trim() || subcategoriesList.includes(newSubcategory.trim())) return;
+        if (!newSubcategory.trim()) return;
+        
+        // Verificar duplicados usando callback en setState  
+        setSubcategoriesList(prev => {
+            if (prev.includes(newSubcategory.trim())) {
+                return prev; // No hacer nada si ya existe
+            }
+            return [...prev, newSubcategory.trim()];
+        });
         
         try {
             const categoryId = categories.find(c => c.name === formData.category)?.id;
@@ -182,7 +204,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
 
             if (error) throw error;
 
-            setSubcategoriesList(prev => [...prev, newSubcategory.trim()]);
             setFormData(prev => ({ ...prev, subcategory: newSubcategory.trim() }));
             setNewSubcategory('');
             setShowNewSubcategory(false);
@@ -192,10 +213,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             console.error('Error al crear subcategoría:', error);
             showToast('Error al crear la subcategoría', 'error');
         }
-    }, [newSubcategory, subcategoriesList, categories, formData.category, showToast]);
+    }, [newSubcategory, categories, formData.category, showToast]);
 
     const handleAddSupplier = useCallback(async () => {
-        if (!newSupplier.trim() || suppliersList.includes(newSupplier.trim())) return;
+        if (!newSupplier.trim()) return;
+        
+        // Verificar duplicados usando callback en setState
+        setSuppliersList(prev => {
+            if (prev.includes(newSupplier.trim())) {
+                return prev; // No hacer nada si ya existe
+            }
+            return [...prev, newSupplier.trim()];
+        });
         
         try {
             console.log('Intentando guardar proveedor:', newSupplier.trim());
@@ -214,7 +243,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
 
             if (error) throw error;
 
-            setSuppliersList(prev => [...prev, newSupplier.trim()]);
             setFormData(prev => ({ ...prev, supplier: newSupplier.trim() }));
             setNewSupplier('');
             setShowNewSupplier(false);
@@ -224,7 +252,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             console.error('Error al crear proveedor:', error);
             showToast('Error al crear el proveedor', 'error');
         }
-    }, [newSupplier, suppliersList, user.id, showToast]);
+    }, [newSupplier, user.id, showToast]);
     
     const handleStockChange = (sucursalId: string, field: keyof StockData, value: string) => {
         // For stock and min_stock, we want integers. For others, float.
@@ -383,13 +411,31 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         const [isFocused, setIsFocused] = useState(false);
         const dropdownRef = useRef<HTMLDivElement>(null);
         const inputRef = useRef<HTMLInputElement>(null);
+        
+        // Refs para evitar dependencias en useEffect
+        const searchTermRef = useRef(searchTerm);
+        const valueRef = useRef(value);
+        const onChangeRef = useRef(onChange);
+        
+        // Actualizar refs cuando cambien los valores
+        React.useEffect(() => {
+            searchTermRef.current = searchTerm;
+        }, [searchTerm]);
+        
+        React.useEffect(() => {
+            valueRef.current = value;
+        }, [value]);
+        
+        React.useEffect(() => {
+            onChangeRef.current = onChange;
+        }, [onChange]);
 
         // Sincronizar searchTerm con value solo cuando no está enfocado
         React.useEffect(() => {
             if (!isFocused && value !== searchTerm) {
                 setSearchTerm(value);
             }
-        }, [value]); // Removimos isFocused de las dependencias
+        }, [value, isFocused]); // Incluido isFocused para evitar loops
 
         // Cerrar dropdown al hacer clic fuera
         React.useEffect(() => {
@@ -398,15 +444,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                     setIsOpen(false);
                     setIsFocused(false);
                     // Solo actualizar el padre si el valor cambió
-                    if (searchTerm !== value) {
-                        onChange(searchTerm);
+                    if (searchTermRef.current !== valueRef.current) {
+                        onChangeRef.current(searchTermRef.current);
                     }
                 }
             };
 
             document.addEventListener('mousedown', handleClickOutside);
             return () => document.removeEventListener('mousedown', handleClickOutside);
-        }, [searchTerm, value, onChange]);
+        }, []); // Sin dependencias
 
         const filteredOptions = options.filter(option =>
             option.toLowerCase().includes(searchTerm.toLowerCase())
