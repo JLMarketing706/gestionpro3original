@@ -300,6 +300,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             }
         };
 
+        // Función optimizada para campos "nuevo" - evita re-renderizado
+        const handleNewValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+            const value = e.target.value;
+            onNewValueChange(value);
+        };
+
         return (
             <div className="space-y-2 relative" ref={dropdownRef}>
                 <label className="text-sm font-medium text-slate-300">
@@ -347,7 +353,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                             type="text"
                             placeholder={`Nuevo ${label.toLowerCase()}`}
                             value={newValue}
-                            onChange={(e) => onNewValueChange(e.target.value)}
+                            onChange={handleNewValueChange}
                             className="flex-1 p-2 bg-slate-800 border border-slate-700 rounded"
                         />
                         <button 
