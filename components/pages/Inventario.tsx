@@ -1,5 +1,5 @@
 
-import React, { useState, useContext, useMemo, useRef } from 'react';
+import React, { useState, useContext, useMemo, useRef, useCallback } from 'react';
 import { AppContext } from '../../contexts/AppContext';
 import { CubeIcon, PlusIcon, CameraIcon, ArrowUpTrayIcon, ArrowPathIcon } from '../icons';
 import { Product, Sucursal, BranchStock, Brand, Category, Subcategory, Supplier } from '../../types';
@@ -101,7 +101,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         }
     };
 
-    const handleAddCategory = async () => {
+    const handleAddCategory = useCallback(async () => {
         if (!newCategory.trim() || categoriesList.includes(newCategory.trim())) return;
         
         try {
@@ -127,9 +127,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             console.error('Error al crear categoría:', error);
             showToast('Error al crear la categoría', 'error');
         }
-    };
+    }, [newCategory, categoriesList, showToast]);
 
-    const handleAddBrand = async () => {
+    const handleAddBrand = useCallback(async () => {
         if (!newBrand.trim() || brandsList.includes(newBrand.trim())) return;
         
         try {
@@ -158,9 +158,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             console.error('Error al crear marca:', error);
             showToast('Error al crear la marca', 'error');
         }
-    };
+    }, [newBrand, brandsList, showToast]);
 
-    const handleAddSubcategory = async () => {
+    const handleAddSubcategory = useCallback(async () => {
         if (!newSubcategory.trim() || subcategoriesList.includes(newSubcategory.trim())) return;
         
         try {
@@ -192,9 +192,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             console.error('Error al crear subcategoría:', error);
             showToast('Error al crear la subcategoría', 'error');
         }
-    };
+    }, [newSubcategory, subcategoriesList, categories, formData.category, showToast]);
 
-    const handleAddSupplier = async () => {
+    const handleAddSupplier = useCallback(async () => {
         if (!newSupplier.trim() || suppliersList.includes(newSupplier.trim())) return;
         
         try {
@@ -224,7 +224,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             console.error('Error al crear proveedor:', error);
             showToast('Error al crear el proveedor', 'error');
         }
-    };
+    }, [newSupplier, suppliersList, user.id, showToast]);
     
     const handleStockChange = (sucursalId: string, field: keyof StockData, value: string) => {
         // For stock and min_stock, we want integers. For others, float.
@@ -293,6 +293,55 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             onSync(getCurrentProductState());
         }
     };
+
+    // Funciones memoizadas para evitar re-renderizados de SearchableSelect
+    const handleCategoryChange = useCallback((value: string) => {
+        setFormData(prev => ({ ...prev, category: value }));
+    }, []);
+
+    const handleSubcategoryChange = useCallback((value: string) => {
+        setFormData(prev => ({ ...prev, subcategory: value }));
+    }, []);
+
+    const handleBrandChange = useCallback((value: string) => {
+        setFormData(prev => ({ ...prev, brand: value }));
+    }, []);
+
+    const handleSupplierChange = useCallback((value: string) => {
+        setFormData(prev => ({ ...prev, supplier: value }));
+    }, []);
+
+    const toggleNewCategory = useCallback(() => {
+        setShowNewCategory(!showNewCategory);
+    }, [showNewCategory]);
+
+    const toggleNewSubcategory = useCallback(() => {
+        setShowNewSubcategory(!showNewSubcategory);
+    }, [showNewSubcategory]);
+
+    const toggleNewBrand = useCallback(() => {
+        setShowNewBrand(!showNewBrand);
+    }, [showNewBrand]);
+
+    const toggleNewSupplier = useCallback(() => {
+        setShowNewSupplier(!showNewSupplier);
+    }, [showNewSupplier]);
+
+    const cancelNewCategory = useCallback(() => {
+        setShowNewCategory(false);
+    }, []);
+
+    const cancelNewSubcategory = useCallback(() => {
+        setShowNewSubcategory(false);
+    }, []);
+
+    const cancelNewBrand = useCallback(() => {
+        setShowNewBrand(false);
+    }, []);
+
+    const cancelNewSupplier = useCallback(() => {
+        setShowNewSupplier(false);
+    }, []);
 
     // Componente para búsqueda con autocompletado - VERSIÓN MEMOIZADA
     const SearchableSelect: React.FC<{
@@ -518,14 +567,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                     <SearchableSelect
                         label="Categoría"
                         value={formData.category}
-                        onChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                        onChange={handleCategoryChange}
                         options={categoriesList}
                         showNew={showNewCategory}
-                        onToggleNew={() => setShowNewCategory(!showNewCategory)}
+                        onToggleNew={toggleNewCategory}
                         newValue={newCategory}
                         onNewValueChange={setNewCategory}
                         onSaveNew={handleAddCategory}
-                        onCancelNew={() => setShowNewCategory(false)}
+                        onCancelNew={cancelNewCategory}
                         placeholder="Buscar o escribir categoría"
                         required
                     />
@@ -534,14 +583,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                     <SearchableSelect
                         label="Subcategoría"
                         value={formData.subcategory}
-                        onChange={(value) => setFormData(prev => ({ ...prev, subcategory: value }))}
+                        onChange={handleSubcategoryChange}
                         options={subcategoriesList}
                         showNew={showNewSubcategory}
-                        onToggleNew={() => setShowNewSubcategory(!showNewSubcategory)}
+                        onToggleNew={toggleNewSubcategory}
                         newValue={newSubcategory}
                         onNewValueChange={setNewSubcategory}
                         onSaveNew={handleAddSubcategory}
-                        onCancelNew={() => setShowNewSubcategory(false)}
+                        onCancelNew={cancelNewSubcategory}
                         placeholder="Buscar o escribir subcategoría"
                     />
 
@@ -549,14 +598,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                     <SearchableSelect
                         label="Marca"
                         value={formData.brand}
-                        onChange={(value) => setFormData(prev => ({ ...prev, brand: value }))}
+                        onChange={handleBrandChange}
                         options={brandsList}
                         showNew={showNewBrand}
-                        onToggleNew={() => setShowNewBrand(!showNewBrand)}
+                        onToggleNew={toggleNewBrand}
                         newValue={newBrand}
                         onNewValueChange={setNewBrand}
                         onSaveNew={handleAddBrand}
-                        onCancelNew={() => setShowNewBrand(false)}
+                        onCancelNew={cancelNewBrand}
                         placeholder="Buscar o escribir marca"
                     />
 
@@ -564,14 +613,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                     <SearchableSelect
                         label="Proveedor"
                         value={formData.supplier}
-                        onChange={(value) => setFormData(prev => ({ ...prev, supplier: value }))}
+                        onChange={handleSupplierChange}
                         options={suppliersList}
                         showNew={showNewSupplier}
-                        onToggleNew={() => setShowNewSupplier(!showNewSupplier)}
+                        onToggleNew={toggleNewSupplier}
                         newValue={newSupplier}
                         onNewValueChange={setNewSupplier}
                         onSaveNew={handleAddSupplier}
-                        onCancelNew={() => setShowNewSupplier(false)}
+                        onCancelNew={cancelNewSupplier}
                         placeholder="Buscar o escribir proveedor"
                     />
                 </div>
