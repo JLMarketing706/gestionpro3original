@@ -294,7 +294,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         }
     };
 
-    // Componente para búsqueda con autocompletado - VERSIÓN CORREGIDA
+    // Componente para búsqueda con autocompletado - VERSIÓN MEMOIZADA
     const SearchableSelect: React.FC<{
         label: string;
         value: string;
@@ -308,7 +308,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         onCancelNew: () => void;
         placeholder: string;
         required?: boolean;
-    }> = ({
+    }> = React.memo(({
         label, value, onChange, options, showNew, onToggleNew,
         newValue, onNewValueChange, onSaveNew, onCancelNew, placeholder, required = false
     }) => {
@@ -465,7 +465,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                 )}
             </div>
         );
-    };
+    });
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto p-1">
