@@ -1,5 +1,5 @@
 
-import React, { useState, useContext, useMemo } from 'react';
+import React, { useState, useContext, useMemo, useRef } from 'react';
 import { AppContext } from '../../contexts/AppContext';
 import { CubeIcon, PlusIcon, CameraIcon, ArrowUpTrayIcon, ArrowPathIcon } from '../icons';
 import { Product, Sucursal, BranchStock, Brand, Category, Subcategory, Supplier } from '../../types';
@@ -31,6 +31,11 @@ type ProductFormProps = {
 };
 
 const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchStocks, brands, categories, subcategories, suppliers, onSave, onCancel, onSync, showToast }) => {
+    // Función auxiliar para obtener nombre por ID
+    const getBrandNameById = (id: string | null) => id ? brands.find(b => b.id === id)?.name || '' : '';
+    const getSubcategoryNameById = (id: string | null) => id ? subcategories.find(s => s.id === id)?.name || '' : '';
+    const getSupplierNameById = (id: string | null) => id ? suppliers.find(s => s.id === id)?.name || '' : '';
+
     const [formData, setFormData] = useState({
         sku: product?.sku || '',
         name: product?.name || '',
@@ -39,11 +44,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         is_active: product?.is_active ?? true,
         description: product?.description || '',
         category: product?.category || '',
-        subcategory: '', // Nuevo campo
-        long_description: '', // Nuevo campo para e-commerce
-        supplier: '', // Nuevo campo proveedor
-        barcode: '', // Campo adicional temporal
-        brand: ''   // Campo adicional temporal
+        subcategory: getSubcategoryNameById((product as any)?.subcategory_id || null),
+        long_description: (product as any)?.long_description || '',
+        supplier: getSupplierNameById((product as any)?.supplier_id || null),
+        barcode: (product as any)?.barcode || '',
+        brand: getBrandNameById((product as any)?.brand_id || null)
     });
 
     // Estados para categorías, subcategorías, marcas y proveedores
@@ -218,11 +223,28 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
     }) => {
         const [isOpen, setIsOpen] = useState(false);
         const [searchTerm, setSearchTerm] = useState(value);
+        const [isFocused, setIsFocused] = useState(false);
+        const dropdownRef = useRef<HTMLDivElement>(null);
 
         // Sincronizar searchTerm con value cuando cambie externamente
         React.useEffect(() => {
-            setSearchTerm(value);
-        }, [value]);
+            if (!isFocused) {
+                setSearchTerm(value);
+            }
+        }, [value, isFocused]);
+
+        // Cerrar dropdown al hacer clic fuera
+        React.useEffect(() => {
+            const handleClickOutside = (event: MouseEvent) => {
+                if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                    setIsOpen(false);
+                    setIsFocused(false);
+                }
+            };
+
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }, []);
 
         const filteredOptions = options.filter(option =>
             option.toLowerCase().includes(searchTerm.toLowerCase())
@@ -239,15 +261,26 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
             setSearchTerm(option);
             onChange(option);
             setIsOpen(false);
+            setIsFocused(false);
+        };
+
+        const handleFocus = () => {
+            setIsFocused(true);
+            setIsOpen(true);
         };
 
         const handleBlur = () => {
-            // Cerrar dropdown después de un delay para permitir clicks en opciones
-            setTimeout(() => setIsOpen(false), 150);
+            // Delay para permitir que el click en las opciones funcione
+            setTimeout(() => {
+                if (!dropdownRef.current?.matches(':hover')) {
+                    setIsFocused(false);
+                    setIsOpen(false);
+                }
+            }, 150);
         };
 
         return (
-            <div className="space-y-2 relative">
+            <div className="space-y-2 relative" ref={dropdownRef}>
                 <label className="text-sm font-medium text-slate-300">
                     {label} {required && '*'}
                 </label>
@@ -257,22 +290,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                             type="text"
                             value={searchTerm}
                             onChange={handleInputChange}
-                            onFocus={() => setIsOpen(true)}
+                            onFocus={handleFocus}
                             onBlur={handleBlur}
                             placeholder={placeholder}
                             required={required}
                             className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500"
                         />
                         {isOpen && filteredOptions.length > 0 && (
-                            <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            <div className="absolute z-50 w-full mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                                 {filteredOptions.map((option, index) => (
                                     <div
                                         key={index}
-                                        onMouseDown={(e) => {
-                                            // Prevenir que el input pierda el foco
-                                            e.preventDefault();
-                                            handleOptionClick(option);
-                                        }}
+                                        onClick={() => handleOptionClick(option)}
                                         className="p-2 hover:bg-slate-700 cursor-pointer text-slate-200"
                                     >
                                         {option}
@@ -284,7 +313,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                     <button 
                         type="button" 
                         onClick={onToggleNew} 
-                        className="px-3 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-bold"
+                        className="px-3 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-bold shrink-0"
                     >
                         +
                     </button>
@@ -301,14 +330,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                         <button 
                             type="button" 
                             onClick={onSaveNew} 
-                            className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm"
+                            className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm shrink-0"
                         >
                             Agregar
                         </button>
                         <button 
                             type="button" 
                             onClick={onCancelNew} 
-                            className="px-3 py-2 bg-slate-600 hover:bg-slate-700 rounded text-white text-sm"
+                            className="px-3 py-2 bg-slate-600 hover:bg-slate-700 rounded text-white text-sm shrink-0"
                         >
                             Cancelar
                         </button>
@@ -322,13 +351,17 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto p-1">
             <h2 className="text-2xl font-bold text-slate-100">{product ? 'Editar Producto' : 'Nuevo Producto'}</h2>
             <div className="flex flex-col sm:flex-row gap-4">
-                <div className="w-full sm:w-1/3">
-                    <label htmlFor="image-upload" className="cursor-pointer">
-                        <div className="w-full aspect-square bg-slate-800 rounded-lg flex items-center justify-center border-2 border-dashed border-slate-700 hover:border-indigo-500 transition-colors">
+                <div className="w-full sm:w-1/3 flex-shrink-0">
+                    <label htmlFor="image-upload" className="cursor-pointer block">
+                        <div className="w-full aspect-square bg-slate-800 rounded-lg flex items-center justify-center border-2 border-dashed border-slate-700 hover:border-indigo-500 transition-colors relative overflow-hidden">
                             {imagePreview ? (
-                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover rounded-lg"/>
+                                <img 
+                                    src={imagePreview} 
+                                    alt="Preview" 
+                                    className="absolute inset-0 w-full h-full object-cover rounded-lg"
+                                />
                             ) : (
-                                <div className="text-center text-slate-500">
+                                <div className="text-center text-slate-500 p-4">
                                     <CameraIcon className="h-12 w-12 mx-auto mb-2"/>
                                     <p className="font-semibold text-slate-400">Subir Imagen</p>
                                 </div>
@@ -337,7 +370,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
                     </label>
                     <input id="image-upload" type="file" accept="image/png, image/jpeg, image/webp" className="hidden" onChange={handleImageChange}/>
                 </div>
-                <div className="w-full sm:w-2/3 space-y-4">
+                <div className="w-full sm:w-2/3 space-y-4 min-w-0">{/* min-w-0 prevents flex overflow */}
                     <input type="text" name="name" placeholder="Nombre del producto" value={formData.name} onChange={handleFormChange} required className="w-full p-3 bg-slate-800 border-2 border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500" />
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
