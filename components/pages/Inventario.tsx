@@ -6,6 +6,7 @@ import { Product, Sucursal, BranchStock, Brand, Category, Subcategory, Supplier 
 import Modal from '../common/Modal';
 import DataTable, { Column } from '../common/DataTable';
 import BulkImportModal from '../common/BulkImportModal';
+import { supabase } from '../../services/supabase';
 
 type StockData = {
     sucursal_id: string;
@@ -24,13 +25,14 @@ type ProductFormProps = {
     categories: Category[];
     subcategories: Subcategory[];
     suppliers: Supplier[];
+    user: { id: string; [key: string]: any };
     onSave: (product: Product, stockData: StockData[], imageFile?: File | null) => Promise<void>; 
     onCancel: () => void;
     onSync: (product: Product) => void;
     showToast: (message: string, type: 'success' | 'error' | 'info') => void;
 };
 
-const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchStocks, brands, categories, subcategories, suppliers, onSave, onCancel, onSync, showToast }) => {
+const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchStocks, brands, categories, subcategories, suppliers, user, onSave, onCancel, onSync, showToast }) => {
     // Función auxiliar para obtener nombre por ID
     const getBrandNameById = (id: string | null) => id ? brands.find(b => b.id === id)?.name || '' : '';
     const getSubcategoryNameById = (id: string | null) => id ? subcategories.find(s => s.id === id)?.name || '' : '';
@@ -99,39 +101,169 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, sucursales, branchSt
         }
     };
 
-    const handleAddCategory = () => {
-        if (newCategory.trim() && !categoriesList.includes(newCategory.trim())) {
+    const handleAddCategory = async () => {
+        if (!newCategory.trim() || categoriesList.includes(newCategory.trim())) return;
+        
+        try {
+            // Generar un ID único para la categoría
+            const categoryId = crypto.randomUUID();
+            
+            // Guardar en Supabase
+            const { data, error } = await supabase
+                .from('categories')
+                .insert([{ 
+                    id: categoryId,
+                    name: newCategory.trim(),
+                    description: null 
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            // Actualizar estado local
             setCategoriesList(prev => [...prev, newCategory.trim()]);
             setFormData(prev => ({ ...prev, category: newCategory.trim() }));
+            
+            // Limpiar y cerrar
             setNewCategory('');
             setShowNewCategory(false);
+            
+            // Mostrar notificación de éxito
+            showToast('Categoría creada correctamente', 'success');
+            
+        } catch (error) {
+            console.error('Error al crear categoría:', error);
+            showToast('Error al crear la categoría', 'error');
         }
     };
 
-    const handleAddBrand = () => {
-        if (newBrand.trim() && !brandsList.includes(newBrand.trim())) {
+    const handleAddBrand = async () => {
+        if (!newBrand.trim() || brandsList.includes(newBrand.trim())) return;
+        
+        try {
+            // Generar un ID único para la marca
+            const brandId = crypto.randomUUID();
+            
+            // Guardar en Supabase
+            const { data, error } = await supabase
+                .from('brands')
+                .insert([{ 
+                    id: brandId,
+                    name: newBrand.trim()
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            // Actualizar estado local
             setBrandsList(prev => [...prev, newBrand.trim()]);
             setFormData(prev => ({ ...prev, brand: newBrand.trim() }));
+            
+            // Limpiar y cerrar
             setNewBrand('');
             setShowNewBrand(false);
+            
+            // Mostrar notificación de éxito
+            showToast('Marca creada correctamente', 'success');
+            
+        } catch (error) {
+            console.error('Error al crear marca:', error);
+            showToast('Error al crear la marca', 'error');
         }
     };
 
-    const handleAddSubcategory = () => {
-        if (newSubcategory.trim() && !subcategoriesList.includes(newSubcategory.trim())) {
+    const handleAddSubcategory = async () => {
+        if (!newSubcategory.trim() || subcategoriesList.includes(newSubcategory.trim())) return;
+        
+        // Verificar que haya una categoría seleccionada
+        if (!formData.category) {
+            showToast('Selecciona una categoría antes de crear una subcategoría', 'error');
+            return;
+        }
+        
+        try {
+            // Buscar el ID de la categoría seleccionada
+            const selectedCategory = categories.find(c => c.name === formData.category);
+            if (!selectedCategory) {
+                showToast('Categoría no encontrada', 'error');
+                return;
+            }
+            
+            // Generar un ID único para la subcategoría
+            const subcategoryId = crypto.randomUUID();
+            
+            // Guardar en Supabase
+            const { data, error } = await supabase
+                .from('subcategories')
+                .insert([{ 
+                    id: subcategoryId,
+                    name: newSubcategory.trim(),
+                    category_id: selectedCategory.id
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            // Actualizar estado local
             setSubcategoriesList(prev => [...prev, newSubcategory.trim()]);
             setFormData(prev => ({ ...prev, subcategory: newSubcategory.trim() }));
+            
+            // Limpiar y cerrar
             setNewSubcategory('');
             setShowNewSubcategory(false);
+            
+            // Mostrar notificación de éxito
+            showToast('Subcategoría creada correctamente', 'success');
+            
+        } catch (error) {
+            console.error('Error al crear subcategoría:', error);
+            showToast('Error al crear la subcategoría', 'error');
         }
     };
 
-    const handleAddSupplier = () => {
-        if (newSupplier.trim() && !suppliersList.includes(newSupplier.trim())) {
+    const handleAddSupplier = async () => {
+        if (!newSupplier.trim() || suppliersList.includes(newSupplier.trim())) return;
+        
+        try {
+            // Generar un ID único para el proveedor
+            const supplierId = crypto.randomUUID();
+            
+            // Guardar en Supabase - note que suppliers requiere user_id
+            const { data, error } = await supabase
+                .from('suppliers')
+                .insert([{ 
+                    id: supplierId,
+                    name: newSupplier.trim(),
+                    user_id: user.id, // Obtener user_id del contexto
+                    address: null,
+                    contact_person: null,
+                    cuit: null,
+                    email: null,
+                    notes: null,
+                    phone: null
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            // Actualizar estado local
             setSuppliersList(prev => [...prev, newSupplier.trim()]);
             setFormData(prev => ({ ...prev, supplier: newSupplier.trim() }));
+            
+            // Limpiar y cerrar
             setNewSupplier('');
             setShowNewSupplier(false);
+            
+            // Mostrar notificación de éxito
+            showToast('Proveedor creado correctamente', 'success');
+            
+        } catch (error) {
+            console.error('Error al crear proveedor:', error);
+            showToast('Error al crear el proveedor', 'error');
         }
     };
     
@@ -790,6 +922,7 @@ const Inventario: React.FC = () => {
                 categories={categories}
                 subcategories={subcategories}
                 suppliers={suppliers}
+                user={user}
                 onSync={syncProductToEcommerce}
                 showToast={showToast}
               />
